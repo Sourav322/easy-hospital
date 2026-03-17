@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register Your Hospital – Easy Hospital</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{min-height:100vh;background:#0A0724;font-family:'Plus Jakarta Sans',sans-serif;color:#fff;display:grid;grid-template-columns:1fr 1fr;}
+    @media(max-width:900px){body{grid-template-columns:1fr;}}
+    .left-panel{background:linear-gradient(135deg,#0A0724 0%,#1E0A5C 50%,#2D1184 100%);display:flex;flex-direction:column;justify-content:center;padding:3rem;position:relative;overflow:hidden;}
+    .left-panel::before{content:'';position:absolute;top:-100px;left:-100px;width:500px;height:500px;background:radial-gradient(circle,rgba(139,92,246,0.25),transparent 70%);pointer-events:none;}
+    .logo{display:flex;align-items:center;gap:0.6rem;margin-bottom:3rem;position:relative;z-index:1;}
+    .logo-icon{width:38px;height:38px;background:linear-gradient(135deg,#7C3AED,#5B21B6);border-radius:10px;display:flex;align-items:center;justify-content:center;}
+    .logo-text{font-size:1.15rem;font-weight:800;letter-spacing:-0.02em;}
+    .left-content{position:relative;z-index:1;}
+    .left-content h1{font-size:2.2rem;font-weight:800;line-height:1.15;margin-bottom:1rem;letter-spacing:-0.03em;}
+    .left-content h1 span{background:linear-gradient(135deg,#A78BFA,#7C3AED);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .left-content p{color:rgba(255,255,255,0.65);font-size:0.95rem;line-height:1.65;margin-bottom:2.5rem;}
+    .feature-list{display:flex;flex-direction:column;gap:0.85rem;}
+    .feature-item{display:flex;align-items:center;gap:0.75rem;font-size:0.87rem;color:rgba(255,255,255,0.8);}
+    .feature-check{width:20px;height:20px;background:rgba(139,92,246,0.25);border:1px solid rgba(139,92,246,0.4);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .trust-badges{margin-top:3rem;display:flex;gap:1.5rem;flex-wrap:wrap;}
+    .trust-badge{font-size:0.75rem;color:rgba(255,255,255,0.45);}
+    @media(max-width:900px){.left-panel{display:none;}}
+    .right-panel{background:#F8F7FF;display:flex;align-items:center;justify-content:center;padding:2.5rem 2rem;overflow-y:auto;}
+    .form-card{width:100%;max-width:520px;}
+    .form-card h2{font-size:1.5rem;font-weight:800;color:#1E1B4B;margin-bottom:0.3rem;letter-spacing:-0.02em;}
+    .subtitle{font-size:0.85rem;color:#6B7280;margin-bottom:2rem;}
+    .step-indicator{display:flex;align-items:center;gap:0;margin-bottom:2rem;}
+    .step{display:flex;align-items:center;gap:0.5rem;}
+    .step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:700;border:2px solid #D1D5DB;color:#9CA3AF;background:#fff;transition:all 0.2s;}
+    .step-num.active{background:#5B21B6;border-color:#5B21B6;color:#fff;}
+    .step-num.done{background:#059669;border-color:#059669;color:#fff;}
+    .step-label{font-size:0.78rem;font-weight:600;color:#9CA3AF;transition:color 0.2s;}
+    .step-label.active{color:#5B21B6;}
+    .step-label.done{color:#059669;}
+    .step-line{flex:1;height:2px;background:#E5E7EB;margin:0 0.5rem;transition:background 0.2s;}
+    .step-line.done{background:#059669;}
+    label{display:block;font-size:0.82rem;font-weight:600;color:#374151;margin-bottom:0.35rem;}
+    input,select,textarea{width:100%;padding:0.65rem 0.9rem;border:1px solid #E5E7EB;border-radius:8px;font-size:0.88rem;font-family:inherit;color:#111827;background:#fff;outline:none;transition:border-color 0.15s;}
+    input:focus,select:focus,textarea:focus{border-color:#5B21B6;box-shadow:0 0 0 3px rgba(91,33,182,0.1);}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
+    .fg{margin-bottom:1rem;}
+    .fg.err input,.fg.err select{border-color:#DC2626;}
+    .fg .em{font-size:0.75rem;color:#DC2626;margin-top:0.2rem;display:none;}
+    .fg.err .em{display:block;}
+    .pwd-wrap{position:relative;}
+    .pwd-wrap input{padding-right:2.5rem;}
+    .pwd-toggle{position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9CA3AF;padding:0;display:flex;}
+    .pwd-strength{height:3px;border-radius:3px;background:#E5E7EB;margin-top:0.4rem;overflow:hidden;}
+    .psb{height:100%;width:0;transition:width 0.3s,background 0.3s;}
+    .btn-p{width:100%;padding:0.75rem;background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;border:none;border-radius:10px;font-size:0.92rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-top:1.5rem;}
+    .btn-p:hover{opacity:0.92;transform:translateY(-1px);}
+    .btn-p:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+    .btn-o{width:100%;padding:0.65rem;background:transparent;color:#5B21B6;border:1.5px solid #5B21B6;border-radius:10px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background 0.15s;margin-top:0.75rem;}
+    .btn-o:hover{background:#F5F3FF;}
+    .plan-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1rem;}
+    .plan-card{border:2px solid #E5E7EB;border-radius:10px;padding:0.85rem 0.6rem;cursor:pointer;text-align:center;transition:all 0.15s;}
+    .plan-card:hover{border-color:#8B5CF6;}
+    .plan-card.sel{border-color:#5B21B6;background:#F5F3FF;}
+    .plan-name{font-size:0.82rem;font-weight:700;color:#1E1B4B;margin-bottom:0.2rem;}
+    .plan-price{font-size:1.15rem;font-weight:800;color:#5B21B6;font-family:'Space Mono',monospace;}
+    .plan-price span{font-size:0.68rem;font-weight:400;color:#9CA3AF;}
+    .plan-beds{font-size:0.72rem;color:#6B7280;margin-top:0.2rem;}
+    .success-screen{text-align:center;padding:2rem 0;}
+    .success-icon{width:72px;height:72px;background:linear-gradient(135deg,#D1FAE5,#A7F3D0);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;color:#059669;}
+    .success-screen h2{font-size:1.4rem;font-weight:800;color:#1E1B4B;margin-bottom:0.5rem;}
+    .success-screen p{color:#6B7280;font-size:0.88rem;line-height:1.6;margin-bottom:2rem;}
+    .signin-link{text-align:center;font-size:0.82rem;color:#6B7280;margin-top:1.25rem;}
+    .signin-link a{color:#5B21B6;font-weight:600;text-decoration:none;}
+    .err-banner{color:#DC2626;font-size:0.82rem;text-align:center;margin-top:0.5rem;display:none;}
+  </style>
+</head>
+<body>
+<!-- Left -->
+<div class="left-panel">
+  <div class="logo">
+    <div class="logo-icon"><svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+    <span class="logo-text">Easy Hospital</span>
+  </div>
+  <div class="left-content">
+    <h1>The HMS built for <span>modern healthcare</span></h1>
+    <p>Join 500+ hospitals across India using Easy Hospital to streamline operations, improve patient care, and grow revenue.</p>
+    <div class="feature-list">
+      <div class="feature-item"><div class="feature-check"><svg width="10" height="10" fill="none" stroke="#A78BFA" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>Full OPD, IPD, Lab & Billing management</div>
+      <div class="feature-item"><div class="feature-check"><svg width="10" height="10" fill="none" stroke="#A78BFA" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>Multi-hospital & multi-branch support</div>
+      <div class="feature-item"><div class="feature-check"><svg width="10" height="10" fill="none" stroke="#A78BFA" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>Role-based access for all staff types</div>
+      <div class="feature-item"><div class="feature-check"><svg width="10" height="10" fill="none" stroke="#A78BFA" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>Real-time analytics and reports</div>
+      <div class="feature-item"><div class="feature-check"><svg width="10" height="10" fill="none" stroke="#A78BFA" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>WhatsApp & SMS patient notifications</div>
+      <div class="feature-item"><div class="feature-check"><svg width="10" height="10" fill="none" stroke="#A78BFA" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>14-day free trial – no credit card needed</div>
+    </div>
+    <div class="trust-badges">
+      <div class="trust-badge">🔒 HIPAA Compliant</div>
+      <div class="trust-badge">⏱ 99.9% Uptime</div>
+      <div class="trust-badge">☁️ Cloud-hosted</div>
+    </div>
+  </div>
+</div>
+
+<!-- Right -->
+<div class="right-panel">
+  <div class="form-card">
+    <div class="step-indicator" id="stepInd">
+      <div class="step"><div class="step-num active" id="sn1">1</div><span class="step-label active" id="sl1">Hospital</span></div>
+      <div class="step-line" id="ln1"></div>
+      <div class="step"><div class="step-num" id="sn2">2</div><span class="step-label" id="sl2">Admin</span></div>
+      <div class="step-line" id="ln2"></div>
+      <div class="step"><div class="step-num" id="sn3">3</div><span class="step-label" id="sl3">Plan</span></div>
+    </div>
+
+    <!-- Step 1 -->
+    <div id="s1">
+      <h2>Register Your Hospital</h2>
+      <p class="subtitle">Set up your hospital profile to get started</p>
+      <div class="form-row">
+        <div class="fg" id="f1"><label>Hospital Name *</label><input type="text" id="hName" placeholder="City Medical Centre"/><div class="em">Required</div></div>
+        <div class="fg" id="f2"><label>Hospital Type *</label><select id="hType"><option value="">Select type</option><option>Multi-Speciality</option><option>Super-Speciality</option><option>General Hospital</option><option>Clinic</option><option>Nursing Home</option></select><div class="em">Required</div></div>
+      </div>
+      <div class="form-row">
+        <div class="fg" id="f3"><label>Reg. Number</label><input type="text" id="hReg" placeholder="MH-2024-HC-00001"/></div>
+        <div class="fg" id="f4"><label>Bed Capacity *</label><input type="number" id="hBeds" placeholder="100" min="1"/><div class="em">Required</div></div>
+      </div>
+      <div class="fg" id="f5"><label>Address *</label><input type="text" id="hAddr" placeholder="Street address"/><div class="em">Required</div></div>
+      <div class="form-row">
+        <div class="fg" id="f6"><label>City *</label><input type="text" id="hCity" placeholder="Mumbai"/><div class="em">Required</div></div>
+        <div class="fg" id="f7"><label>State *</label><input type="text" id="hState" placeholder="Maharashtra"/><div class="em">Required</div></div>
+      </div>
+      <div class="form-row">
+        <div class="fg" id="f8"><label>Hospital Phone *</label><input type="tel" id="hPhone" placeholder="+91 98765 43210"/><div class="em">Required</div></div>
+        <div class="fg" id="f9"><label>Hospital Email *</label><input type="email" id="hEmail" placeholder="info@hospital.com"/><div class="em">Valid email needed</div></div>
+      </div>
+      <button class="btn-p" onclick="s1Next()">Continue →</button>
+      <div class="signin-link">Already registered? <a href="index.html">Sign in</a></div>
+    </div>
+
+    <!-- Step 2 -->
+    <div id="s2" style="display:none;">
+      <h2>Admin Account</h2>
+      <p class="subtitle">This account will have full admin access</p>
+      <div class="form-row">
+        <div class="fg" id="fa1"><label>First Name *</label><input type="text" id="aFirst" placeholder="Rajesh"/><div class="em">Required</div></div>
+        <div class="fg" id="fa2"><label>Last Name *</label><input type="text" id="aLast" placeholder="Sharma"/><div class="em">Required</div></div>
+      </div>
+      <div class="fg" id="fa3"><label>Admin Email *</label><input type="email" id="aEmail" placeholder="you@hospital.com"/><div class="em">Valid email needed</div></div>
+      <div class="fg" id="fa4"><label>Mobile Number *</label><input type="tel" id="aPhone" placeholder="+91 98765 43210"/><div class="em">Required</div></div>
+      <div class="fg" id="fa5">
+        <label>Password *</label>
+        <div class="pwd-wrap">
+          <input type="password" id="aPwd" placeholder="Min 8 chars, 1 uppercase, 1 number" oninput="chkPwd(this.value)"/>
+          <button class="pwd-toggle" type="button" onclick="tglPwd('aPwd')">👁</button>
+        </div>
+        <div class="pwd-strength"><div class="psb" id="psb"></div></div>
+        <div class="em">Min 8 characters</div>
+      </div>
+      <div class="fg" id="fa6">
+        <label>Confirm Password *</label>
+        <div class="pwd-wrap"><input type="password" id="aConf" placeholder="Repeat password"/><button class="pwd-toggle" type="button" onclick="tglPwd('aConf')">👁</button></div>
+        <div class="em">Passwords do not match</div>
+      </div>
+      <button class="btn-p" onclick="s2Next()">Continue →</button>
+      <button class="btn-o" onclick="goS(1)">← Back</button>
+    </div>
+
+    <!-- Step 3 -->
+    <div id="s3" style="display:none;">
+      <h2>Choose Your Plan</h2>
+      <p class="subtitle">14-day free trial on all plans • No credit card required</p>
+      <div class="plan-cards">
+        <div class="plan-card sel" id="pc-starter" onclick="selPlan('starter')"><div class="plan-name">Starter</div><div class="plan-price">₹999<span>/mo</span></div><div class="plan-beds">Up to 50 beds</div></div>
+        <div class="plan-card" id="pc-growth" onclick="selPlan('growth')"><div class="plan-name">Growth</div><div class="plan-price">₹2,499<span>/mo</span></div><div class="plan-beds">Up to 200 beds</div></div>
+        <div class="plan-card" id="pc-enterprise" onclick="selPlan('enterprise')"><div class="plan-name">Enterprise</div><div class="plan-price">Custom</div><div class="plan-beds">Unlimited</div></div>
+      </div>
+      <div style="background:#F5F3FF;border:1px solid #DDD6FE;border-radius:10px;padding:1rem;font-size:0.82rem;color:#5B21B6;margin-bottom:0.5rem;">
+        <strong>✓ All plans include:</strong> All modules, unlimited users, free onboarding, WhatsApp & SMS, daily backups
+      </div>
+      <div class="err-banner" id="regErr"></div>
+      <button class="btn-p" id="submitBtn" onclick="doRegister()">🏥 Start Free Trial</button>
+      <button class="btn-o" onclick="goS(2)">← Back</button>
+    </div>
+
+    <!-- Success -->
+    <div id="sSuccess" style="display:none;">
+      <div class="success-screen">
+        <div class="success-icon"><svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <h2>You're all set! 🎉</h2>
+        <p>Your hospital account has been created. Check your email for login credentials and getting-started guide.</p>
+        <a href="index.html"><button class="btn-p" style="margin-top:0;">Go to Login →</button></a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let plan='starter';
+function v(id){ const e=document.getElementById(id); return e?e.value.trim():''; }
+function fErr(fid,show){ const el=document.getElementById(fid); if(!el) return; el.classList.toggle('err',show); }
+function isEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+
+function s1Next(){
+  let ok=true;
+  if(!v('hName')){ fErr('f1',true); ok=false; } else fErr('f1',false);
+  if(!v('hType')){ fErr('f2',true); ok=false; } else fErr('f2',false);
+  if(!v('hBeds')){ fErr('f4',true); ok=false; } else fErr('f4',false);
+  if(!v('hAddr')){ fErr('f5',true); ok=false; } else fErr('f5',false);
+  if(!v('hCity')){ fErr('f6',true); ok=false; } else fErr('f6',false);
+  if(!v('hState')){ fErr('f7',true); ok=false; } else fErr('f7',false);
+  if(!v('hPhone')){ fErr('f8',true); ok=false; } else fErr('f8',false);
+  if(!isEmail(v('hEmail'))){ fErr('f9',true); ok=false; } else fErr('f9',false);
+  if(ok) goS(2);
+}
+
+function s2Next(){
+  let ok=true;
+  if(!v('aFirst')){ fErr('fa1',true); ok=false; } else fErr('fa1',false);
+  if(!v('aLast')){ fErr('fa2',true); ok=false; } else fErr('fa2',false);
+  if(!isEmail(v('aEmail'))){ fErr('fa3',true); ok=false; } else fErr('fa3',false);
+  if(!v('aPhone')){ fErr('fa4',true); ok=false; } else fErr('fa4',false);
+  const p=v('aPwd'), c=v('aConf');
+  if(p.length<8){ fErr('fa5',true); ok=false; } else fErr('fa5',false);
+  if(p!==c||!c){ fErr('fa6',true); ok=false; } else fErr('fa6',false);
+  if(ok) goS(3);
+}
+
+function goS(n){
+  document.getElementById('s1').style.display='none';
+  document.getElementById('s2').style.display='none';
+  document.getElementById('s3').style.display='none';
+  document.getElementById('s'+n).style.display='block';
+  updInd(n);
+}
+
+function updInd(n){
+  for(let i=1;i<=3;i++){
+    const sn=document.getElementById('sn'+i), sl=document.getElementById('sl'+i);
+    sn.className='step-num'; sl.className='step-label';
+    if(i<n){ sn.classList.add('done'); sn.textContent='✓'; sl.classList.add('done'); }
+    else if(i===n){ sn.classList.add('active'); sl.classList.add('active'); sn.textContent=i; }
+    else{ sn.textContent=i; }
+  }
+  for(let i=1;i<=2;i++){ const ln=document.getElementById('ln'+i); ln.className='step-line'+(i<n?' done':''); }
+}
+
+function selPlan(p){
+  plan=p;
+  document.querySelectorAll('.plan-card').forEach(c=>c.classList.remove('sel'));
+  document.getElementById('pc-'+p).classList.add('sel');
+}
+
+async function doRegister(){
+  const btn=document.getElementById('submitBtn');
+  btn.disabled=true; btn.textContent='Creating account…';
+  const payload={
+    hospital_name:v('hName'), hospital_type:v('hType'),
+    bed_capacity:parseInt(v('hBeds'))||0,
+    address:v('hAddr'), city:v('hCity'), state:v('hState'),
+    phone:v('hPhone'), email:v('hEmail'),
+    admin_first_name:v('aFirst'), admin_last_name:v('aLast'),
+    admin_email:v('aEmail'), admin_phone:v('aPhone'),
+    admin_password:v('aPwd'), plan
+  };
+  try{
+    const res=await fetch('/api/auth/register-hospital',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Registration failed');
+    document.getElementById('s3').style.display='none';
+    document.getElementById('stepInd').style.display='none';
+    document.getElementById('sSuccess').style.display='block';
+  } catch(e){
+    const eb=document.getElementById('regErr'); eb.textContent=e.message; eb.style.display='block';
+    btn.disabled=false; btn.textContent='🏥 Start Free Trial';
+  }
+}
+
+function chkPwd(v){
+  const bar=document.getElementById('psb');
+  let s=0;
+  if(v.length>=8) s++;
+  if(/[A-Z]/.test(v)) s++;
+  if(/[0-9]/.test(v)) s++;
+  if(/[^A-Za-z0-9]/.test(v)) s++;
+  const c=['#DC2626','#D97706','#2563EB','#059669'];
+  const w=['25%','50%','75%','100%'];
+  bar.style.width=v.length?w[s-1]||'10%':'0';
+  bar.style.background=v.length?c[s-1]||'#DC2626':'';
+}
+
+function tglPwd(id){
+  const el=document.getElementById(id);
+  el.type=el.type==='password'?'text':'password';
+}
+</script>
+</body>
+</html>
