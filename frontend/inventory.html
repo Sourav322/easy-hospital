@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Inventory – Easy Hospital</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-icon"><i data-lucide="activity"></i></div>
+        <div class="logo-text"><span class="logo-main">Easy</span><span class="logo-sub">Hospital</span></div>
+      </div>
+      <button class="sidebar-close" onclick="toggleSidebar()"><i data-lucide="x"></i></button>
+    </div>
+    <div id="sidebar-nav"></div>
+  </aside>
+  <div class="main-content">
+    <div id="topbar-container"></div>
+    <div class="page-content">
+
+      <div class="stats-grid">
+        <div class="stat-card purple"><div class="stat-icon"><i data-lucide="package"></i></div><div class="stat-info"><div class="stat-value" id="stat-total">—</div><div class="stat-label">Total Items</div></div></div>
+        <div class="stat-card red"><div class="stat-icon"><i data-lucide="alert-triangle"></i></div><div class="stat-info"><div class="stat-value" id="stat-low">—</div><div class="stat-label">Low Stock Alerts</div></div></div>
+        <div class="stat-card green"><div class="stat-icon"><i data-lucide="check-circle"></i></div><div class="stat-info"><div class="stat-value" id="stat-ok">—</div><div class="stat-label">Adequately Stocked</div></div></div>
+        <div class="stat-card blue"><div class="stat-icon"><i data-lucide="indian-rupee"></i></div><div class="stat-info"><div class="stat-value" id="stat-value">—</div><div class="stat-label">Inventory Value</div></div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="flex-between flex-wrap gap-3">
+          <div class="search-box">
+            <i data-lucide="search"></i>
+            <input type="text" id="search-input" placeholder="Search items…" oninput="debounce(loadItems,300)()"/>
+          </div>
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;">
+            <select id="filter-category" class="form-select" style="width:160px;" onchange="loadItems()">
+              <option value="">All Categories</option>
+              <option value="medicine">Medicine</option>
+              <option value="surgical">Surgical</option>
+              <option value="equipment">Equipment</option>
+              <option value="consumable">Consumable</option>
+              <option value="other">Other</option>
+            </select>
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.875rem;cursor:pointer;white-space:nowrap;">
+              <input type="checkbox" id="filter-low" onchange="loadItems()"/> Low stock only
+            </label>
+            <button class="btn-outline" onclick="openModal('tx-modal')"><i data-lucide="arrow-right-left"></i> Stock Entry</button>
+            <button class="btn-primary" onclick="openAddItemModal()"><i data-lucide="plus"></i> Add Item</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Item</th><th>Category</th><th>Unit</th><th>Stock</th><th>Min Level</th><th>Unit Price</th><th>Total Value</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="items-tbody"><tr><td colspan="9" class="text-center"><div class="loading-spinner"></div></td></tr></tbody>
+          </table>
+        </div>
+        <div id="pagination-container" class="pagination" style="margin-top:1rem;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Item Modal -->
+<div class="modal-overlay" id="item-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="item-modal-title">Add Item</h3>
+      <button class="btn-icon" onclick="closeModal('item-modal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="item-id"/>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Item Name *</label><input type="text" id="i-name" class="form-input" placeholder="e.g. Paracetamol 500mg"/></div>
+        <div class="form-group"><label class="form-label">Category *</label>
+          <select id="i-cat" class="form-select">
+            <option value="medicine">Medicine</option><option value="surgical">Surgical</option>
+            <option value="equipment">Equipment</option><option value="consumable">Consumable</option><option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Unit *</label><input type="text" id="i-unit" class="form-input" placeholder="Tablet / Strip / Pcs"/></div>
+        <div class="form-group"><label class="form-label">Current Stock *</label><input type="number" id="i-stock" class="form-input" placeholder="0" min="0"/></div>
+        <div class="form-group"><label class="form-label">Minimum Level</label><input type="number" id="i-min" class="form-input" placeholder="10" min="0"/></div>
+        <div class="form-group"><label class="form-label">Unit Price (₹)</label><input type="number" id="i-price" class="form-input" placeholder="0.00" min="0" step="0.01"/></div>
+        <div class="form-group" style="grid-column:1/-1;"><label class="form-label">Description</label><textarea id="i-desc" class="form-textarea" rows="2" placeholder="Optional description…"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('item-modal')">Cancel</button>
+      <button class="btn-primary" onclick="saveItem()"><i data-lucide="save"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Stock Transaction Modal -->
+<div class="modal-overlay" id="tx-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Stock Entry</h3>
+      <button class="btn-icon" onclick="closeModal('tx-modal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Item *</label><select id="tx-item" class="form-select"></select></div>
+      <div class="form-group"><label class="form-label">Type *</label>
+        <select id="tx-type" class="form-select">
+          <option value="purchase">Purchase (In)</option><option value="usage">Usage (Out)</option>
+          <option value="adjustment">Adjustment</option><option value="return">Return</option><option value="expired">Expired/Discarded</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Quantity *</label><input type="number" id="tx-qty" class="form-input" placeholder="Enter quantity" min="1"/></div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea id="tx-notes" class="form-textarea" rows="2"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('tx-modal')">Cancel</button>
+      <button class="btn-success" onclick="saveTransaction()"><i data-lucide="check"></i> Record</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  requireAuth(); renderSidebar('inventory'); renderTopbar('Inventory','Medicines, equipment & supplies'); lucide.createIcons();
+
+  let currentPage=1; const PER_PAGE=12;
+  let allItems=[], editingItemId=null;
+
+  async function loadItems(){
+    const search=document.getElementById('search-input').value;
+    const cat=document.getElementById('filter-category').value;
+    const low=document.getElementById('filter-low').checked;
+    let url=`/api/inventory?page=${currentPage}&limit=${PER_PAGE}`;
+    if(search) url+=`&search=${encodeURIComponent(search)}`;
+    if(cat) url+=`&category=${cat}`;
+    if(low) url+=`&low_stock=true`;
+    const res=await api.get(url);
+    const items=res.items||[];
+    const total=res.total||0;
+    allItems=items;
+
+    const lowCount=items.filter(i=>Number(i.current_stock)<=Number(i.minimum_stock_level||0)).length;
+    document.getElementById('stat-total').textContent=total;
+    document.getElementById('stat-low').textContent=lowCount;
+    document.getElementById('stat-ok').textContent=items.length-lowCount;
+    const val=items.reduce((s,i)=>s+Number(i.unit_price||0)*Number(i.current_stock||0),0);
+    document.getElementById('stat-value').textContent='₹'+val.toLocaleString('en-IN',{maximumFractionDigits:0});
+
+    document.getElementById('tx-item').innerHTML=items.map(i=>`<option value="${i.id}">${i.name} (${i.current_stock} ${i.unit})</option>`).join('');
+
+    const tbody=document.getElementById('items-tbody');
+    if(!items.length){tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state"><i data-lucide="package"></i><p>No items found</p></div></td></tr>`;lucide.createIcons();return;}
+    tbody.innerHTML=items.map(item=>{
+      const isLow=Number(item.current_stock)<=Number(item.minimum_stock_level||0);
+      return `<tr class="${isLow?'row-warning':''}">
+        <td><div style="font-weight:600;">${item.name}</div>${item.description?`<div style="font-size:.75rem;color:var(--text-muted);">${item.description}</div>`:''}</td>
+        <td><span class="badge-info">${item.category}</span></td>
+        <td>${item.unit}</td>
+        <td style="font-weight:700;font-size:1rem;color:${isLow?'var(--danger)':'var(--success)'};">${item.current_stock}</td>
+        <td>${item.minimum_stock_level||'—'}</td>
+        <td>${item.unit_price?'₹'+Number(item.unit_price).toFixed(2):'—'}</td>
+        <td style="font-weight:600;">₹${(Number(item.unit_price||0)*Number(item.current_stock||0)).toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
+        <td><span class="badge-${isLow?'danger':'success'}">${isLow?'Low Stock':'OK'}</span></td>
+        <td><div style="display:flex;gap:.5rem;">
+          <button class="btn-icon" title="Edit" onclick="editItem(${item.id})"><i data-lucide="edit"></i></button>
+          <button class="btn-icon" title="Stock Entry" onclick="quickEntry(${item.id})"><i data-lucide="plus-circle"></i></button>
+        </div></td>
+      </tr>`;
+    }).join('');
+    renderPagination(total,currentPage,PER_PAGE,p=>{currentPage=p;loadItems();});
+    lucide.createIcons();
+  }
+
+  function openAddItemModal(){
+    editingItemId=null;
+    document.getElementById('item-modal-title').textContent='Add Inventory Item';
+    document.getElementById('item-id').value='';
+    ['i-name','i-unit','i-stock','i-min','i-price','i-desc'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('i-cat').value='medicine';
+    openModal('item-modal'); lucide.createIcons();
+  }
+
+  function editItem(id){
+    const item=allItems.find(i=>i.id==id); if(!item) return;
+    editingItemId=id;
+    document.getElementById('item-modal-title').textContent='Edit Item';
+    document.getElementById('item-id').value=item.id;
+    document.getElementById('i-name').value=item.name;
+    document.getElementById('i-cat').value=item.category;
+    document.getElementById('i-unit').value=item.unit;
+    document.getElementById('i-stock').value=item.current_stock;
+    document.getElementById('i-min').value=item.minimum_stock_level||'';
+    document.getElementById('i-price').value=item.unit_price||'';
+    document.getElementById('i-desc').value=item.description||'';
+    openModal('item-modal'); lucide.createIcons();
+  }
+
+  function quickEntry(id){
+    document.getElementById('tx-item').value=id;
+    document.getElementById('tx-type').value='purchase';
+    document.getElementById('tx-qty').value='';
+    document.getElementById('tx-notes').value='';
+    openModal('tx-modal'); lucide.createIcons();
+  }
+
+  async function saveItem(){
+    const payload={name:document.getElementById('i-name').value.trim(),category:document.getElementById('i-cat').value,unit:document.getElementById('i-unit').value.trim(),current_stock:document.getElementById('i-stock').value,minimum_stock_level:document.getElementById('i-min').value||null,unit_price:document.getElementById('i-price').value||null,description:document.getElementById('i-desc').value.trim()};
+    if(!payload.name||!payload.unit){showToast('Name and unit are required.','error');return;}
+    try{
+      if(editingItemId) await api.put(`/api/inventory/${editingItemId}`,payload);
+      else await api.post('/api/inventory',payload);
+      showToast(editingItemId?'Item updated!':'Item added!','success');
+      closeModal('item-modal'); loadItems();
+    }catch(e){showToast(e.message||'Error saving item','error');}
+  }
+
+  async function saveTransaction(){
+    const payload={item_id:document.getElementById('tx-item').value,transaction_type:document.getElementById('tx-type').value,quantity:document.getElementById('tx-qty').value,notes:document.getElementById('tx-notes').value.trim()};
+    if(!payload.item_id||!payload.quantity){showToast('Please select item and quantity.','error');return;}
+    try{await api.post('/api/inventory/transaction',payload);showToast('Stock entry recorded!','success');closeModal('tx-modal');loadItems();}
+    catch(e){showToast(e.message||'Error recording entry','error');}
+  }
+
+  function renderPagination(total,page,perPage,cb){
+    const pages=Math.ceil(total/perPage),c=document.getElementById('pagination-container');
+    if(pages<=1){c.innerHTML='';return;}
+    c.innerHTML=`<button class="btn-outline btn-sm" ${page===1?'disabled':''} onclick="(${cb})(${page-1})">←</button>`
+      +Array.from({length:pages},(_,i)=>`<button class="btn-${i+1===page?'primary':'outline'} btn-sm" onclick="(${cb})(${i+1})">${i+1}</button>`).join('')
+      +`<button class="btn-outline btn-sm" ${page===pages?'disabled':''} onclick="(${cb})(${page+1})">→</button>`;
+  }
+
+  loadItems();
+</script>
+</body>
+</html>
