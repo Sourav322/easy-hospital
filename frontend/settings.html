@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Settings – Easy Hospital</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .settings-layout { display:grid; grid-template-columns:220px 1fr; gap:1.5rem; align-items:start; }
+    @media (max-width:768px){ .settings-layout { grid-template-columns:1fr; } }
+    .settings-nav { background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; position:sticky; top:80px; }
+    .settings-nav-item { display:flex; align-items:center; gap:0.7rem; padding:0.75rem 1rem; font-size:0.85rem; font-weight:500; color:var(--text-secondary); cursor:pointer; border-left:3px solid transparent; transition:all 0.15s; }
+    .settings-nav-item:hover { background:var(--bg-secondary); color:var(--text-primary); }
+    .settings-nav-item.active { background:#F5F3FF; color:var(--primary); border-left-color:var(--primary); font-weight:600; }
+    .settings-nav-divider { height:1px; background:var(--border); margin:0.25rem 0; }
+    .settings-panel { display:none; }
+    .settings-panel.active { display:block; }
+    .settings-section { background:#fff; border:1px solid var(--border); border-radius:12px; margin-bottom:1.25rem; overflow:hidden; }
+    .settings-section-header { padding:1rem 1.25rem; border-bottom:1px solid var(--border); }
+    .settings-section-header h3 { font-size:0.95rem; font-weight:700; color:var(--text-primary); }
+    .settings-section-header p { font-size:0.78rem; color:var(--text-muted); margin-top:0.15rem; }
+    .settings-section-body { padding:1.25rem; }
+    .settings-row { display:flex; align-items:center; justify-content:space-between; padding:0.85rem 0; border-bottom:1px solid var(--border); gap:1rem; }
+    .settings-row:last-child { border-bottom:none; padding-bottom:0; }
+    .settings-row-info h4 { font-size:0.85rem; font-weight:600; color:var(--text-primary); }
+    .settings-row-info p  { font-size:0.78rem; color:var(--text-muted); margin-top:0.1rem; }
+    .toggle { position:relative; width:42px; height:22px; flex-shrink:0; }
+    .toggle input { opacity:0; width:0; height:0; }
+    .toggle-slider { position:absolute; inset:0; background:#D1D5DB; border-radius:22px; cursor:pointer; transition:0.2s; }
+    .toggle-slider:before { content:''; position:absolute; height:16px; width:16px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:0.2s; }
+    .toggle input:checked + .toggle-slider { background:var(--primary); }
+    .toggle input:checked + .toggle-slider:before { transform:translateX(20px); }
+    .avatar-upload { display:flex; align-items:center; gap:1rem; }
+    .avatar-preview { width:72px; height:72px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.5rem; font-weight:700; flex-shrink:0; }
+    .color-options { display:flex; gap:0.5rem; flex-wrap:wrap; }
+    .color-dot { width:30px; height:30px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:0.15s; }
+    .color-dot.selected { border-color: #1E1B4B; transform:scale(1.15); }
+    .user-table-card { background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+    .permission-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:0.75rem; }
+    .permission-item { display:flex; align-items:center; gap:0.5rem; padding:0.6rem 0.75rem; border:1px solid var(--border); border-radius:8px; font-size:0.82rem; color:var(--text-secondary); }
+    .permission-item input[type=checkbox] { accent-color:var(--primary); width:15px; height:15px; }
+    .backup-card { background:linear-gradient(135deg,#F5F3FF 0%,#EDE9FE 100%); border:1px solid #DDD6FE; border-radius:10px; padding:1rem; display:flex; align-items:center; gap:1rem; }
+    .backup-icon { width:40px; height:40px; background:var(--primary); border-radius:10px; display:flex; align-items:center; justify-content:center; color:#fff; flex-shrink:0; }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <header class="topbar" id="topbar"></header>
+    <main class="page-content">
+      <div class="settings-layout">
+
+        <!-- Nav -->
+        <div class="settings-nav">
+          <div class="settings-nav-item active" onclick="switchTab('hospital')" id="nav-hospital">
+            <i data-lucide="building-2" style="width:16px;height:16px;"></i> Hospital Profile
+          </div>
+          <div class="settings-nav-item" onclick="switchTab('general')" id="nav-general">
+            <i data-lucide="settings" style="width:16px;height:16px;"></i> General
+          </div>
+          <div class="settings-nav-divider"></div>
+          <div class="settings-nav-item" onclick="switchTab('users')" id="nav-users">
+            <i data-lucide="users" style="width:16px;height:16px;"></i> Users & Roles
+          </div>
+          <div class="settings-nav-item" onclick="switchTab('permissions')" id="nav-permissions">
+            <i data-lucide="shield" style="width:16px;height:16px;"></i> Permissions
+          </div>
+          <div class="settings-nav-divider"></div>
+          <div class="settings-nav-item" onclick="switchTab('billing-cfg')" id="nav-billing-cfg">
+            <i data-lucide="receipt" style="width:16px;height:16px;"></i> Billing Config
+          </div>
+          <div class="settings-nav-item" onclick="switchTab('notifications')" id="nav-notifications">
+            <i data-lucide="bell" style="width:16px;height:16px;"></i> Notifications
+          </div>
+          <div class="settings-nav-divider"></div>
+          <div class="settings-nav-item" onclick="switchTab('integrations')" id="nav-integrations">
+            <i data-lucide="plug" style="width:16px;height:16px;"></i> Integrations
+          </div>
+          <div class="settings-nav-item" onclick="switchTab('backup')" id="nav-backup">
+            <i data-lucide="database" style="width:16px;height:16px;"></i> Backup & Data
+          </div>
+          <div class="settings-nav-divider"></div>
+          <div class="settings-nav-item" onclick="switchTab('appearance')" id="nav-appearance">
+            <i data-lucide="palette" style="width:16px;height:16px;"></i> Appearance
+          </div>
+          <div class="settings-nav-item" onclick="switchTab('security')" id="nav-security">
+            <i data-lucide="lock" style="width:16px;height:16px;"></i> Security
+          </div>
+        </div>
+
+        <!-- Panels -->
+        <div>
+
+          <!-- Hospital Profile -->
+          <div class="settings-panel active" id="panel-hospital">
+            <div class="settings-section">
+              <div class="settings-section-header"><h3>Hospital Profile</h3><p>Basic information about your hospital</p></div>
+              <div class="settings-section-body">
+                <div class="avatar-upload" style="margin-bottom:1.5rem;">
+                  <div class="avatar-preview" id="logoPreview">CH</div>
+                  <div>
+                    <button class="btn-outline btn-sm" onclick="document.getElementById('logoInput').click()"><i data-lucide="upload" style="width:13px;height:13px;"></i> Upload Logo</button>
+                    <input type="file" id="logoInput" accept="image/*" style="display:none;" onchange="previewLogo(event)"/>
+                    <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem;">PNG, JPG up to 2MB. Recommended 200×200px</p>
+                  </div>
+                </div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label">Hospital Name *</label>
+                    <input class="form-input" type="text" id="hospName" value="City Medical Centre" placeholder="Hospital name"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Registration Number</label>
+                    <input class="form-input" type="text" id="regNo" value="MH-2015-HC-00421" placeholder="Reg. no."/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Contact Email</label>
+                    <input class="form-input" type="email" id="hospEmail" value="info@citymedical.com"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Contact Phone</label>
+                    <input class="form-input" type="tel" id="hospPhone" value="+91 98765 43210"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Hospital Type</label>
+                    <select class="form-select" id="hospType">
+                      <option selected>Multi-Speciality</option>
+                      <option>Super-Speciality</option>
+                      <option>General</option>
+                      <option>Clinic</option>
+                      <option>Diagnostic Centre</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Bed Capacity</label>
+                    <input class="form-input" type="number" id="bedCap" value="120"/>
+                  </div>
+                  <div class="form-group" style="grid-column:1/-1;">
+                    <label class="form-label">Address</label>
+                    <textarea class="form-textarea" rows="2" id="hospAddr">123, MG Road, Andheri West, Mumbai, Maharashtra – 400058</textarea>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">City</label>
+                    <input class="form-input" type="text" id="hospCity" value="Mumbai"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">State</label>
+                    <input class="form-input" type="text" id="hospState" value="Maharashtra"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">PIN Code</label>
+                    <input class="form-input" type="text" id="hospPin" value="400058"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">GSTIN</label>
+                    <input class="form-input" type="text" id="hospGst" value="27AABCU9603R1ZX"/>
+                  </div>
+                </div>
+                <div style="margin-top:1rem;">
+                  <button class="btn-primary" onclick="saveHospital()"><i data-lucide="save" style="width:14px;height:14px;"></i> Save Changes</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- General Settings -->
+          <div class="settings-panel" id="panel-general">
+            <div class="settings-section">
+              <div class="settings-section-header"><h3>General Settings</h3><p>Localisation and operational defaults</p></div>
+              <div class="settings-section-body">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label">Time Zone</label>
+                    <select class="form-select"><option selected>Asia/Kolkata (IST +05:30)</option><option>UTC</option><option>Asia/Dubai</option></select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Date Format</label>
+                    <select class="form-select"><option selected>DD/MM/YYYY</option><option>MM/DD/YYYY</option><option>YYYY-MM-DD</option></select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Currency</label>
+                    <select class="form-select"><option selected>INR (₹)</option><option>USD ($)</option><option>EUR (€)</option></select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Language</label>
+                    <select class="form-select"><option selected>English</option><option>Hindi</option><option>Marathi</option></select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">OPD Start Time</label>
+                    <input class="form-input" type="time" value="09:00"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">OPD End Time</label>
+                    <input class="form-input" type="time" value="17:00"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Appointment Slot (mins)</label>
+                    <select class="form-select"><option>10</option><option selected>15</option><option>20</option><option>30</option></select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Max Patients per Slot</label>
+                    <input class="form-input" type="number" value="1"/>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="settings-section">
+              <div class="settings-section-header"><h3>Feature Toggles</h3><p>Enable or disable modules for your hospital</p></div>
+              <div class="settings-section-body">
+                <div class="settings-row"><div class="settings-row-info"><h4>Pharmacy Module</h4><p>Manage drug dispensing and prescriptions</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>Laboratory Module</h4><p>Lab test orders and results management</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>Inventory Management</h4><p>Track stock levels and reorder alerts</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>IPD / Ward Management</h4><p>In-patient admissions and bed allocation</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>Online Appointments</h4><p>Allow patients to book via patient portal</p></div><label class="toggle"><input type="checkbox"/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>WhatsApp Notifications</h4><p>Send appointment reminders via WhatsApp</p></div><label class="toggle"><input type="checkbox"/><span class="toggle-slider"></span></label></div>
+              </div>
+            </div>
+            <div style="margin-top:0.5rem;"><button class="btn-primary" onclick="showToast('Settings saved','success')"><i data-lucide="save" style="width:14px;height:14px;"></i> Save Changes</button></div>
+          </div>
+
+          <!-- Users & Roles -->
+          <div class="settings-panel" id="panel-users">
+            <div class="settings-section">
+              <div class="settings-section-header" style="display:flex;align-items:center;justify-content:space-between;">
+                <div><h3>Users & Roles</h3><p>Manage staff accounts and access levels</p></div>
+                <button class="btn-primary btn-sm" onclick="openModal('addUserModal')"><i data-lucide="user-plus" style="width:13px;height:13px;"></i> Add User</button>
+              </div>
+              <div class="table-container">
+                <table>
+                  <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr></thead>
+                  <tbody id="usersTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Permissions -->
+          <div class="settings-panel" id="panel-permissions">
+            <div class="settings-section">
+              <div class="settings-section-header"><h3>Role Permissions</h3><p>Configure what each role can access and do</p></div>
+              <div class="settings-section-body">
+                <div class="form-group" style="margin-bottom:1.25rem;">
+                  <label class="form-label">Configure permissions for role:</label>
+                  <select class="form-select" style="max-width:240px;" onchange="loadPermissions(this.value)">
+                    <option value="receptionist">Receptionist</option>
+                    <option value="doctor">Doctor</option>
+                    <option value="nurse">Nurse</option>
+                    <option value="lab_technician">Lab Technician</option>
+                    <option value="pharmacist">Pharmacist</option>
+                    <option value="accountant">Accountant</option>
+                    <option value="hospital_admin">Hospital Admin</option>
+                  </select>
+                </div>
+                <div class="permission-grid" id="permGrid"></div>
+                <div style="margin-top:1rem;"><button class="btn-primary" onclick="showToast('Permissions saved','success')"><i data-lucide="save" style="width:14px;height:14px;"></i> Save Permissions</button></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Billing Config -->
+          <div class="settings-panel" id="panel-billing-cfg">
+            <div class="settings-section">
+              <div class="settings-section-header"><h3>Billing Configuration</h3><p>Tax, discount and payment settings</p></div>
+              <div class="settings-section-body">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label">GST / Tax Rate (%)</label>
+                    <input class="form-input" type="number" value="18" min="0" max="28"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Default Discount (%)</label>
+                    <input class="form-input" type="number" value="0"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Bill Prefix</label>
+                    <input class="form-input" type="text" value="BILL-"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Starting Number</label>
+                    <input class="form-input" type="number" value="1"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Invoice Footer Note</label>
+                    <input class="form-input" type="text" value="Thank you for choosing City Medical Centre."/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">UPI ID (for QR on bills)</label>
+                    <input class="form-input" type="text" value="citymedical@upi"/>
+                  </div>
+                </div>
+                <div class="settings-row" style="margin-top:0.5rem;"><div class="settings-row-info"><h4>Enable GST on bills</h4><p>Show GST breakup on all generated invoices</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>Allow partial payments</h4><p>Let patients pay in multiple instalments</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>Print QR code on invoice</h4><p>Include UPI QR for quick payment</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
+                <div style="margin-top:1rem;"><button class="btn-primary" onclick="showToast('Billing config saved','success')"><i data-lucide="save" style="width:14px;height:14px;"></i> Save Changes</button></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notifications -->
+          <div class="settings-panel" id="panel-notifications">
+            <div class="settings-section">
+              <div class="settings-section-header"><h3>Notification Settings</h3><p>Configure when and how alerts are sent</p></div>
+              <div class="settings-section-body">
+                <div class="settings-row"><div class="settings-row-info"><h4>Appointment Reminders</h4><p>Notify patients 24h before appointment</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>Lab Result Ready</h4><p>Alert patient and doctor when report is ready</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>Low Stock Alert</h4><p>Notify admin when inventory hits reorder level</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>Bill Payment Reminder</h4><p>SMS / email for pending dues after 7 days</p></div><label class="toggle"><input type="checkbox"/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>Daily Summary Email</h4><p>Send analytics summary to admin every morning</p></div><label class="toggle"><input type="checkbox"/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>New Patient Registration</h4><p>Notify admin on each new patient added</p></div><label class="toggle"><input type="checkbox"/><span class="toggle-slider"></span></label></div>
+              </div>
+            </div>
+            <div class="settings-section">
+              <div class="settings-section-header"><h3>SMS / Email Gateway</h3><p>Configure your messaging provider</p></div>
+              <div class="settings-section-body">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label">SMS Provider</label>
+                    <select class="form-select"><option selected>Twilio</option><option>MSG91</option><option>Textlocal</option><option>Disabled</option></select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">API Key</label>
+                    <input class="form-input" type="password" placeholder="Enter API key" value="••••••••••••••••"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Sender ID</label>
+                    <input class="form-input" type="text" value="CMCHOS"/>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Email Provider</label>
+                    <select class="form-select"><option selected>SendGrid</option><option>Mailgun</option><option>SMTP</option><option>Disabled</option></select>
+                  </div>
+                </div>
+                <div style="margin-top:1rem; display:flex; gap:0.75rem;">
+                  <button class="btn-primary" onclick="showToast('Notification settings saved','success')"><i data-lucide="save" style="width:14px;height:14px;"></i> Save</button>
+                  <button class="btn-outline" onclick="showToast('Test SMS sent','info')"><i data-lucide="send" style="width:14px;height:14px;"></i> Send Test</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Integrations -->
+          <div class="settings-panel" id="panel-integrations">
+            <div class="settings-section">
+              <div class="settings-section-header"><h3>Integrations</h3><p>Connect third-party services</p></div>
+              <div class="settings-section-body">
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;">
+                  <!-- Integration Card -->
+                  <div style="border:1px solid var(--border);border-radius:10px;padding:1rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+                      <div style="font-size:0.9rem;font-weight:700;">🧪 Razor Pay</div>
+                      <span class="badge badge-success">Connected</span>
+                    </div>
+                    <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.75rem;">Accept UPI, card, netbanking payments</p>
+                    <button class="btn-outline btn-sm" style="width:100%;">Configure</button>
+                  </div>
+                  <div style="border:1px solid var(--border);border-radius:10px;padding:1rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+                      <div style="font-size:0.9rem;font-weight:700;">💬 WhatsApp</div>
+                      <span class="badge badge-secondary">Not Connected</span>
+                    </div>
+                    <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.75rem;">Send appointment reminders & reports via WhatsApp</p>
+                    <button class="btn-primary btn-sm" style="width:100%;">Connect</button>
+                  </div>
+                  <div style="border:1px solid var(--border);border-radius:10px;padding:1rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+                      <div style="font-size:0.9rem;font-weight:700;">🧾 Tally ERP</div>
+                      <span class="badge badge-secondary">Not Connected</span>
+                    </div>
+                    <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.75rem;">Sync billing data with Tally for accounting</p>
+                    <button class="btn-primary btn-sm" style="width:100%;">Connect</button>
+                  </div>
+                  <div style="border:1px solid var(--border);border-radius:10px;padding:1rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+                      <div style="font-size:0.9rem;font-weight:700;">📱 Patient App</div>
+                      <span class="badge badge-success">Connected</span>
+                    </div>
+                    <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.75rem;">Self-service appointment booking via patient portal</p>
+                    <button class="btn-outline btn-sm" style="width:100%;">Configure</button>
+                  </div>
+                  <div style="border:1px solid var(--border);border-radius:10px;padding:1rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+                      <div style="font-size:0.9rem;font-weight:700;">🔬 LIMS Sync</div>
+                      <span class="badge badge-secondary">Not Connected</span>
+                    </div>
+                    <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.75rem;">Auto-import lab results from external LIMS</p>
+                    <button class="btn-primary btn-sm" style="width:100%;">Connect</button>
+                  </div>
+                  <div style="border:1px solid var(--border);border-radius:10px;padding:1rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+                      <div style="font-size:0.9rem;font-weight:700;">☁️ Google Drive</div>
+                      <span class="badge badge-secondary">Not Connected</span>
+                    </div>
+                    <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.75rem;">Auto-backup reports and documents to Google Drive</p>
+                    <button class="btn-primary btn-sm" style="width:100%;">Connect</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Backup -->
+          <div class="settings-panel" id="panel-backup">
+            <div class="settings-section">
+              <div class="settings-section-header"><h3>Backup & Data</h3><p>Manage database backups and data exports</p></div>
+              <div class="settings-section-body">
+                <div class="backup-card" style="margin-bottom:1rem;">
+                  <div class="backup-icon"><i data-lucide="database" style="width:18px;height:18px;"></i></div>
+                  <div style="flex:1;">
+                    <div style="font-size:0.88rem;font-weight:700;color:var(--text-primary);">Last Backup</div>
+                    <div style="font-size:0.78rem;color:var(--text-muted);">Today, 03:00 AM • 48.2 MB • Auto</div>
+                  </div>
+                  <button class="btn-primary btn-sm" onclick="showToast('Backup started…','info')"><i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> Backup Now</button>
+                </div>
+                <div class="settings-row"><div class="settings-row-info"><h4>Auto Daily Backup</h4><p>Automatic backup at 3 AM every day</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>Weekly Full Backup</h4><p>Full database export every Sunday</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>Cloud Backup (S3)</h4><p>Upload encrypted backups to AWS S3</p></div><label class="toggle"><input type="checkbox"/><span class="toggle-slider"></span></label></div>
+                <div style="margin-top:1.25rem;display:flex;gap:0.75rem;flex-wrap:wrap;">
+                  <button class="btn-outline" onclick="showToast('Exporting patient data…','info')"><i data-lucide="download" style="width:14px;height:14px;"></i> Export Patients CSV</button>
+                  <button class="btn-outline" onclick="showToast('Exporting billing data…','info')"><i data-lucide="download" style="width:14px;height:14px;"></i> Export Billing CSV</button>
+                  <button class="btn-outline btn-danger" onclick="confirmDanger()" style="color:#DC2626;border-color:#DC2626;"><i data-lucide="trash-2" style="width:14px;height:14px;"></i> Delete All Data</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Appearance -->
+          <div class="settings-panel" id="panel-appearance">
+            <div class="settings-section">
+              <div class="settings-section-header"><h3>Appearance</h3><p>Customise the look and feel of the HMS</p></div>
+              <div class="settings-section-body">
+                <div class="form-group" style="margin-bottom:1.25rem;">
+                  <label class="form-label" style="margin-bottom:0.5rem;">Primary Accent Color</label>
+                  <div class="color-options">
+                    <div class="color-dot selected" style="background:#5B21B6;" title="Purple" onclick="pickColor(this,'#5B21B6')"></div>
+                    <div class="color-dot" style="background:#2563EB;" title="Blue" onclick="pickColor(this,'#2563EB')"></div>
+                    <div class="color-dot" style="background:#059669;" title="Green" onclick="pickColor(this,'#059669')"></div>
+                    <div class="color-dot" style="background:#D97706;" title="Amber" onclick="pickColor(this,'#D97706')"></div>
+                    <div class="color-dot" style="background:#DC2626;" title="Red" onclick="pickColor(this,'#DC2626')"></div>
+                    <div class="color-dot" style="background:#0891B2;" title="Cyan" onclick="pickColor(this,'#0891B2')"></div>
+                  </div>
+                </div>
+                <div class="settings-row"><div class="settings-row-info"><h4>Compact Mode</h4><p>Reduce padding for higher information density</p></div><label class="toggle"><input type="checkbox"/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>Show Animations</h4><p>Enable transitions and micro-animations</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>Show Welcome Banner</h4><p>Display daily greeting on dashboard</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
+                <div style="margin-top:1rem;"><button class="btn-primary" onclick="showToast('Appearance saved','success')"><i data-lucide="save" style="width:14px;height:14px;"></i> Save</button></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Security -->
+          <div class="settings-panel" id="panel-security">
+            <div class="settings-section">
+              <div class="settings-section-header"><h3>Change Password</h3><p>Update your account password</p></div>
+              <div class="settings-section-body">
+                <div class="form-grid" style="max-width:500px;">
+                  <div class="form-group" style="grid-column:1/-1;">
+                    <label class="form-label">Current Password</label>
+                    <input class="form-input" type="password" id="curPwd" placeholder="Enter current password"/>
+                  </div>
+                  <div class="form-group" style="grid-column:1/-1;">
+                    <label class="form-label">New Password</label>
+                    <input class="form-input" type="password" id="newPwd" placeholder="Min 8 chars, 1 uppercase, 1 number"/>
+                  </div>
+                  <div class="form-group" style="grid-column:1/-1;">
+                    <label class="form-label">Confirm New Password</label>
+                    <input class="form-input" type="password" id="confPwd" placeholder="Repeat new password"/>
+                  </div>
+                </div>
+                <div style="margin-top:1rem;"><button class="btn-primary" onclick="changePassword()"><i data-lucide="lock" style="width:14px;height:14px;"></i> Update Password</button></div>
+              </div>
+            </div>
+            <div class="settings-section">
+              <div class="settings-section-header"><h3>Security Settings</h3></div>
+              <div class="settings-section-body">
+                <div class="settings-row"><div class="settings-row-info"><h4>Two-Factor Authentication</h4><p>Require OTP on login for all admin accounts</p></div><label class="toggle"><input type="checkbox"/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>Session Timeout (30 min)</h4><p>Auto-logout after 30 minutes of inactivity</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>IP Whitelist</h4><p>Restrict login to specific IP addresses</p></div><label class="toggle"><input type="checkbox"/><span class="toggle-slider"></span></label></div>
+                <div class="settings-row"><div class="settings-row-info"><h4>Login Audit Log</h4><p>Record all login attempts in the audit trail</p></div><label class="toggle"><input type="checkbox" checked/><span class="toggle-slider"></span></label></div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- end panels -->
+      </div><!-- end settings-layout -->
+    </main>
+  </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal-overlay" id="addUserModal" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title">Add User</h3>
+      <button class="btn-icon" onclick="closeModal('addUserModal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Full Name *</label><input class="form-input" type="text" id="uName" placeholder="John Doe"/></div>
+        <div class="form-group"><label class="form-label">Email *</label><input class="form-input" type="email" id="uEmail" placeholder="john@hospital.com"/></div>
+        <div class="form-group"><label class="form-label">Role *</label>
+          <select class="form-select" id="uRole">
+            <option value="">Select role</option>
+            <option>receptionist</option><option>doctor</option><option>nurse</option>
+            <option>lab_technician</option><option>pharmacist</option><option>accountant</option>
+            <option>hospital_admin</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Phone</label><input class="form-input" type="tel" id="uPhone" placeholder="Mobile number"/></div>
+        <div class="form-group" style="grid-column:1/-1;"><label class="form-label">Temporary Password *</label><input class="form-input" type="password" id="uPwd" placeholder="Min 8 characters"/></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('addUserModal')">Cancel</button>
+      <button class="btn-primary" onclick="addUser()"><i data-lucide="user-plus" style="width:14px;height:14px;"></i> Create User</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+renderSidebar('settings');
+renderTopbar('Settings','Hospital configuration and preferences');
+lucide.createIcons();
+
+function switchTab(tab){
+  document.querySelectorAll('.settings-nav-item').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.settings-panel').forEach(el=>el.classList.remove('active'));
+  document.getElementById('nav-'+tab).classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+  if(tab==='users') loadUsers();
+  if(tab==='permissions') loadPermissions('receptionist');
+  lucide.createIcons();
+}
+
+// Mock users
+const mockUsers=[
+  {name:'Rajesh Sharma',email:'rajesh@citymedical.com',role:'hospital_admin',status:'Active',last:'Today, 9:14 AM'},
+  {name:'Dr. Anita Patel',email:'anita@citymedical.com',role:'doctor',status:'Active',last:'Today, 8:52 AM'},
+  {name:'Priya Singh',email:'priya@citymedical.com',role:'receptionist',status:'Active',last:'Yesterday'},
+  {name:'Suresh Kumar',email:'suresh@citymedical.com',role:'nurse',status:'Active',last:'Today, 7:30 AM'},
+  {name:'Lab Tech 1',email:'lab1@citymedical.com',role:'lab_technician',status:'Inactive',last:'3 days ago'},
+];
+
+function loadUsers(){
+  const tb=document.getElementById('usersTable');
+  tb.innerHTML=mockUsers.map((u,i)=>`
+    <tr>
+      <td><div style="display:flex;align-items:center;gap:0.6rem;"><div class="avatar-circle">${u.name[0]}</div><span style="font-weight:500;">${u.name}</span></div></td>
+      <td style="color:var(--text-muted);font-size:0.82rem;">${u.email}</td>
+      <td><span class="badge badge-secondary" style="font-size:0.7rem;">${u.role}</span></td>
+      <td>${u.status==='Active'?'<span class="badge badge-success">Active</span>':'<span class="badge badge-danger">Inactive</span>'}</td>
+      <td style="font-size:0.78rem;color:var(--text-muted);">${u.last}</td>
+      <td><div style="display:flex;gap:0.35rem;">
+        <button class="btn-icon" title="Edit" onclick="showToast('Edit user','info')"><i data-lucide="pencil" style="width:14px;height:14px;"></i></button>
+        <button class="btn-icon" title="Reset Password" onclick="showToast('Password reset email sent','success')"><i data-lucide="key" style="width:14px;height:14px;"></i></button>
+        <button class="btn-icon" title="${u.status==='Active'?'Deactivate':'Activate'}" onclick="showToast('Status updated','success')"><i data-lucide="${u.status==='Active'?'user-x':'user-check'}" style="width:14px;height:14px;"></i></button>
+      </div></td>
+    </tr>
+  `).join('');
+  lucide.createIcons();
+}
+
+const allPermissions=['View Patients','Add Patients','Edit Patients','View Appointments','Book Appointments','Cancel Appointments','View OPD','Create OPD Consultation','View IPD','Admit Patient','Discharge Patient','View Lab Orders','Create Lab Order','Enter Lab Results','View Billing','Create Bills','Mark Bill Paid','View Inventory','Manage Inventory','View Reports','View Staff','Manage Staff','System Settings'];
+
+const roleDefaults={
+  receptionist:['View Patients','Add Patients','View Appointments','Book Appointments','Cancel Appointments','View Billing','Create Bills'],
+  doctor:['View Patients','View Appointments','View OPD','Create OPD Consultation','View IPD','Admit Patient','Discharge Patient','View Lab Orders','Create Lab Order'],
+  nurse:['View Patients','View OPD','View IPD','View Lab Orders'],
+  lab_technician:['View Lab Orders','Enter Lab Results'],
+  pharmacist:['View Patients','View Billing'],
+  accountant:['View Billing','Create Bills','Mark Bill Paid','View Reports'],
+  hospital_admin: allPermissions
+};
+
+function loadPermissions(role){
+  const granted=roleDefaults[role]||[];
+  document.getElementById('permGrid').innerHTML=allPermissions.map(p=>`
+    <div class="permission-item">
+      <input type="checkbox" id="perm-${p.replace(/\s/g,'-')}" ${granted.includes(p)?'checked':''}/>
+      <label for="perm-${p.replace(/\s/g,'-')}" style="cursor:pointer;">${p}</label>
+    </div>
+  `).join('');
+}
+
+async function addUser(){
+  const name=document.getElementById('uName').value.trim();
+  const email=document.getElementById('uEmail').value.trim();
+  const role=document.getElementById('uRole').value;
+  if(!name||!email||!role){ showToast('Fill required fields','warning'); return; }
+  try{ await api.post('/api/auth/register-staff',{name,email,role,password:document.getElementById('uPwd').value}); showToast('User created','success'); }
+  catch(e){ showToast('User created (demo)','success'); }
+  closeModal('addUserModal');
+  loadUsers();
+}
+
+async function saveHospital(){
+  const payload={ name:document.getElementById('hospName').value, registration_number:document.getElementById('regNo').value, email:document.getElementById('hospEmail').value, phone:document.getElementById('hospPhone').value, address:document.getElementById('hospAddr').value, city:document.getElementById('hospCity').value, state:document.getElementById('hospState').value };
+  try{ await api.put('/api/settings/hospital',payload); showToast('Hospital profile saved','success'); }
+  catch(e){ showToast('Profile saved (demo)','success'); }
+}
+
+async function changePassword(){
+  const cur=document.getElementById('curPwd').value, np=document.getElementById('newPwd').value, cp=document.getElementById('confPwd').value;
+  if(!cur||!np){ showToast('Fill all fields','warning'); return; }
+  if(np!==cp){ showToast('Passwords do not match','danger'); return; }
+  if(np.length<8){ showToast('Minimum 8 characters','warning'); return; }
+  try{ await api.post('/api/auth/change-password',{currentPassword:cur,newPassword:np}); showToast('Password updated','success'); }
+  catch(e){ showToast('Password updated (demo)','success'); }
+}
+
+function previewLogo(e){
+  const file=e.target.files[0]; if(!file) return;
+  const r=new FileReader(); r.onload=ev=>{ const el=document.getElementById('logoPreview'); el.style.backgroundImage=`url(${ev.target.result})`; el.style.backgroundSize='cover'; el.textContent=''; }; r.readAsDataURL(file);
+}
+
+function pickColor(el,color){
+  document.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('selected'));
+  el.classList.add('selected');
+  document.documentElement.style.setProperty('--primary',color);
+  showToast('Accent colour updated','success');
+}
+
+function confirmDanger(){
+  if(confirm('⚠️ This will permanently delete ALL hospital data. This cannot be undone.\n\nAre you absolutely sure?')){
+    showToast('Action blocked in demo mode','danger');
+  }
+}
+</script>
+</body>
+</html>
