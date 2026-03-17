@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reports – Easy Hospital</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .report-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1rem; margin-bottom:2rem; }
+    .report-card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:1.25rem; cursor:pointer; transition:all 0.2s; display:flex; align-items:flex-start; gap:1rem; }
+    .report-card:hover { border-color:var(--primary); box-shadow:0 4px 20px rgba(91,33,182,0.1); transform:translateY(-2px); }
+    .report-card-icon { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .report-card-icon.purple { background:#EDE9FE; color:var(--primary); }
+    .report-card-icon.green  { background:#D1FAE5; color:#059669; }
+    .report-card-icon.blue   { background:#DBEAFE; color:#2563EB; }
+    .report-card-icon.yellow { background:#FEF3C7; color:#D97706; }
+    .report-card-icon.red    { background:#FEE2E2; color:#DC2626; }
+    .report-card-icon.pink   { background:#FCE7F3; color:#DB2777; }
+    .report-card h4 { font-size:0.9rem; font-weight:600; color:var(--text-primary); margin-bottom:0.2rem; }
+    .report-card p  { font-size:0.78rem; color:var(--text-muted); line-height:1.4; }
+    .report-section { margin-bottom:2rem; }
+    .report-section-title { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.75rem; padding-bottom:0.5rem; border-bottom:1px solid var(--border); }
+    .charts-row { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-bottom:1.25rem; }
+    @media (max-width:900px) { .charts-row { grid-template-columns:1fr; } }
+    .chart-card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:1.25rem; }
+    .chart-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
+    .chart-card-title { font-size:0.9rem; font-weight:600; color:var(--text-primary); }
+    .date-range-bar { display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; background:#fff; border:1px solid var(--border); border-radius:10px; padding:0.85rem 1.1rem; margin-bottom:1.5rem; }
+    .date-range-bar label { font-size:0.82rem; font-weight:600; color:var(--text-secondary); }
+    .date-range-bar input[type=date], .date-range-bar select { font-size:0.82rem; padding:0.35rem 0.65rem; border:1px solid var(--border); border-radius:6px; color:var(--text-primary); outline:none; font-family:inherit; }
+    .date-range-bar input[type=date]:focus, .date-range-bar select:focus { border-color:var(--primary); }
+    .kpi-band { display:grid; grid-template-columns:repeat(4,1fr); background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:1.5rem; }
+    .kpi-item { padding:1rem 1.25rem; border-right:1px solid var(--border); text-align:center; }
+    .kpi-item:last-child { border-right:none; }
+    .kpi-value { font-size:1.5rem; font-weight:800; color:var(--text-primary); font-family:'Space Mono',monospace; }
+    .kpi-label { font-size:0.72rem; color:var(--text-muted); margin-top:0.15rem; }
+    .kpi-delta { font-size:0.72rem; font-weight:600; margin-top:0.2rem; }
+    .kpi-delta.up { color:#059669; }
+    .kpi-delta.dn { color:#DC2626; }
+    @media (max-width:700px) { .kpi-band { grid-template-columns:repeat(2,1fr); } }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <header class="topbar" id="topbar"></header>
+    <main class="page-content">
+
+      <!-- Date Range Bar -->
+      <div class="date-range-bar">
+        <label>Period:</label>
+        <select id="presetRange" onchange="applyPreset(this.value)">
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month" selected>This Month</option>
+          <option value="quarter">This Quarter</option>
+          <option value="year">This Year</option>
+          <option value="custom">Custom Range</option>
+        </select>
+        <label>From:</label>
+        <input type="date" id="dateFrom"/>
+        <label>To:</label>
+        <input type="date" id="dateTo"/>
+        <button class="btn-primary btn-sm" onclick="generateReport()">
+          <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> Generate
+        </button>
+        <div style="margin-left:auto;display:flex;gap:0.5rem;">
+          <button class="btn-outline btn-sm" onclick="showToast('Exported to CSV','success')"><i data-lucide="download" style="width:13px;height:13px;"></i> CSV</button>
+          <button class="btn-outline btn-sm" onclick="window.print()"><i data-lucide="printer" style="width:13px;height:13px;"></i> Print</button>
+        </div>
+      </div>
+
+      <!-- KPI Band -->
+      <div class="kpi-band">
+        <div class="kpi-item"><div class="kpi-value" id="kpiPat">—</div><div class="kpi-label">Total Patients</div><div class="kpi-delta up" id="kpiPatD">—</div></div>
+        <div class="kpi-item"><div class="kpi-value" id="kpiApt">—</div><div class="kpi-label">Appointments</div><div class="kpi-delta up" id="kpiAptD">—</div></div>
+        <div class="kpi-item"><div class="kpi-value" id="kpiRev">—</div><div class="kpi-label">Revenue</div><div class="kpi-delta up" id="kpiRevD">—</div></div>
+        <div class="kpi-item"><div class="kpi-value" id="kpiOcc">—</div><div class="kpi-label">Bed Occupancy</div><div class="kpi-delta" id="kpiOccD">—</div></div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-card-header"><span class="chart-card-title">Patient Registrations</span><span style="font-size:0.72rem;padding:0.2rem 0.55rem;border-radius:20px;background:#DBEAFE;color:#2563EB;font-weight:600;">Daily</span></div>
+          <canvas id="patientChart" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-header"><span class="chart-card-title">Revenue Breakdown</span><span style="font-size:0.72rem;padding:0.2rem 0.55rem;border-radius:20px;background:#D1FAE5;color:#059669;font-weight:600;">By Type</span></div>
+          <canvas id="revenueChart" height="200"></canvas>
+        </div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-card-header"><span class="chart-card-title">OPD vs IPD Visits</span></div>
+          <canvas id="opdIpdChart" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-header"><span class="chart-card-title">Department-wise Load</span></div>
+          <canvas id="deptChart" height="200"></canvas>
+        </div>
+      </div>
+
+      <!-- Clinical Reports -->
+      <div class="report-section">
+        <div class="report-section-title">Clinical Reports</div>
+        <div class="report-grid">
+          <div class="report-card" onclick="openDetailReport('patient-reg')">
+            <div class="report-card-icon purple"><i data-lucide="users" style="width:20px;height:20px;"></i></div>
+            <div><h4>Patient Registration</h4><p>New registrations, demographics, UHID list by date range</p></div>
+          </div>
+          <div class="report-card" onclick="openDetailReport('opd')">
+            <div class="report-card-icon blue"><i data-lucide="stethoscope" style="width:20px;height:20px;"></i></div>
+            <div><h4>OPD Consultation</h4><p>Consultations by doctor, department, diagnosis summary</p></div>
+          </div>
+          <div class="report-card" onclick="openDetailReport('ipd')">
+            <div class="report-card-icon green"><i data-lucide="bed" style="width:20px;height:20px;"></i></div>
+            <div><h4>IPD Admission</h4><p>Admissions, discharges, average length of stay, ward-wise</p></div>
+          </div>
+          <div class="report-card" onclick="openDetailReport('lab')">
+            <div class="report-card-icon yellow"><i data-lucide="flask-conical" style="width:20px;height:20px;"></i></div>
+            <div><h4>Laboratory</h4><p>Test orders, turnaround time, test-wise volume</p></div>
+          </div>
+          <div class="report-card" onclick="openDetailReport('appointment')">
+            <div class="report-card-icon pink"><i data-lucide="calendar-check" style="width:20px;height:20px;"></i></div>
+            <div><h4>Appointments</h4><p>Scheduled vs attended, no-show rate, slot utilisation</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Financial Reports -->
+      <div class="report-section">
+        <div class="report-section-title">Financial Reports</div>
+        <div class="report-grid">
+          <div class="report-card" onclick="openDetailReport('billing')">
+            <div class="report-card-icon green"><i data-lucide="receipt" style="width:20px;height:20px;"></i></div>
+            <div><h4>Billing Summary</h4><p>Total billed, collected, outstanding, service-wise revenue</p></div>
+          </div>
+          <div class="report-card" onclick="openDetailReport('collection')">
+            <div class="report-card-icon purple"><i data-lucide="indian-rupee" style="width:20px;height:20px;"></i></div>
+            <div><h4>Daily Collection</h4><p>Cash, card, UPI breakdowns with cashier-wise summary</p></div>
+          </div>
+          <div class="report-card" onclick="openDetailReport('outstanding')">
+            <div class="report-card-icon red"><i data-lucide="alert-circle" style="width:20px;height:20px;"></i></div>
+            <div><h4>Outstanding Dues</h4><p>Pending bills, aging buckets (30/60/90+ days)</p></div>
+          </div>
+          <div class="report-card" onclick="openDetailReport('inventory-val')">
+            <div class="report-card-icon yellow"><i data-lucide="package" style="width:20px;height:20px;"></i></div>
+            <div><h4>Inventory Valuation</h4><p>Stock value by category, consumption vs purchase</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HR Reports -->
+      <div class="report-section">
+        <div class="report-section-title">HR &amp; Operations</div>
+        <div class="report-grid">
+          <div class="report-card" onclick="openDetailReport('attendance')">
+            <div class="report-card-icon blue"><i data-lucide="clock" style="width:20px;height:20px;"></i></div>
+            <div><h4>Staff Attendance</h4><p>Attendance log, department-wise, absenteeism analysis</p></div>
+          </div>
+          <div class="report-card" onclick="openDetailReport('doctor-perf')">
+            <div class="report-card-icon purple"><i data-lucide="user-check" style="width:20px;height:20px;"></i></div>
+            <div><h4>Doctor Performance</h4><p>Consultations per doctor, revenue generated, ratings</p></div>
+          </div>
+          <div class="report-card" onclick="openDetailReport('bed-occ')">
+            <div class="report-card-icon green"><i data-lucide="layout-grid" style="width:20px;height:20px;"></i></div>
+            <div><h4>Bed Occupancy</h4><p>Ward-wise occupancy rate, turnover, average stay</p></div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Detail Report Modal -->
+<div class="modal-overlay" id="detailModal" style="display:none;">
+  <div class="modal modal-xl" style="max-height:85vh;overflow:hidden;display:flex;flex-direction:column;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="detailModalTitle">Report</h3>
+      <button class="btn-icon" onclick="closeModal('detailModal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body" style="overflow-y:auto;flex:1;">
+      <div class="flex-wrap gap-3" style="margin-bottom:1rem;">
+        <select class="form-select" id="detailDept" style="width:auto;"><option value="">All Departments</option><option>Cardiology</option><option>Orthopedics</option><option>General Medicine</option><option>Pediatrics</option><option>Gynecology</option></select>
+        <select class="form-select" id="detailDoc" style="width:auto;"><option value="">All Doctors</option></select>
+        <button class="btn-primary btn-sm" onclick="loadDetailData()"><i data-lucide="search" style="width:13px;height:13px;"></i> Filter</button>
+        <button class="btn-outline btn-sm" style="margin-left:auto;" onclick="showToast('Exported','success')"><i data-lucide="download" style="width:13px;height:13px;"></i> Export</button>
+      </div>
+      <div class="table-container">
+        <table><thead id="detailThead"></thead><tbody id="detailTbody"></tbody></table>
+      </div>
+      <div id="detailEmpty" class="empty-state" style="display:none;"><i data-lucide="file-search"></i><h3>No data found</h3><p>Adjust filters or date range</p></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('detailModal')">Close</button>
+      <button class="btn-primary" onclick="window.print()"><i data-lucide="printer" style="width:14px;height:14px;"></i> Print</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+renderSidebar('reports');
+renderTopbar('Reports & Analytics','Business intelligence and operational insights');
+lucide.createIcons();
+
+let patientChart, revenueChart, opdIpdChart, deptChart, currentReport='';
+
+function toISO(d){ return d.toISOString().split('T')[0]; }
+function daysAgo(n){ const d=new Date(); d.setDate(d.getDate()-n); return d; }
+
+function applyPreset(val){
+  const now=new Date(); let from, to=toISO(now);
+  if(val==='today') from=to;
+  else if(val==='week') from=toISO(daysAgo(6));
+  else if(val==='month') from=toISO(new Date(now.getFullYear(),now.getMonth(),1));
+  else if(val==='quarter'){ const q=Math.floor(now.getMonth()/3); from=toISO(new Date(now.getFullYear(),q*3,1)); }
+  else if(val==='year') from=`${now.getFullYear()}-01-01`;
+  else return;
+  document.getElementById('dateFrom').value=from;
+  document.getElementById('dateTo').value=to;
+  generateReport();
+}
+
+async function generateReport(){
+  const from=document.getElementById('dateFrom').value, to=document.getElementById('dateTo').value;
+  if(!from||!to){ showToast('Select date range','warning'); return; }
+  try{ const d=await api.get(`/api/reports/overview?from=${from}&to=${to}`); renderKPIs(d); renderCharts(d); }
+  catch(e){ const d=mockData(); renderKPIs(d); renderCharts(d); }
+}
+
+function mockData(){
+  const labels=[], now=new Date();
+  for(let i=29;i>=0;i--){ const d=new Date(); d.setDate(now.getDate()-i); labels.push(d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'})); }
+  return {
+    kpi:{patients:1284,appts:3741,revenue:842600,occupancy:72},
+    kpiDelta:{patients:'+12%',appts:'+8%',revenue:'+15%',occupancy:'+3%'},
+    patientTrend:{labels,data:labels.map(()=>Math.floor(Math.random()*60+20))},
+    revenuePie:{labels:['OPD','IPD','Lab','Pharmacy','Procedures'],data:[28,35,15,12,10]},
+    opdIpd:{labels,opd:labels.map(()=>Math.floor(Math.random()*50+30)),ipd:labels.map(()=>Math.floor(Math.random()*15+5))},
+    depts:{labels:['Cardiology','Orthopedics','Pediatrics','Gynecology','Gen. Medicine','Neurology'],data:[18,14,12,11,25,8]}
+  };
+}
+
+function renderKPIs(d){
+  const k=d.kpi||{}, delta=d.kpiDelta||{};
+  document.getElementById('kpiPat').textContent=(k.patients||0).toLocaleString();
+  document.getElementById('kpiApt').textContent=(k.appts||0).toLocaleString();
+  document.getElementById('kpiRev').textContent='₹'+(((k.revenue||0)/100000).toFixed(1))+'L';
+  document.getElementById('kpiOcc').textContent=(k.occupancy||0)+'%';
+  document.getElementById('kpiPatD').textContent=delta.patients||'';
+  document.getElementById('kpiAptD').textContent=delta.appts||'';
+  document.getElementById('kpiRevD').textContent=delta.revenue||'';
+  document.getElementById('kpiOccD').textContent=delta.occupancy||'';
+}
+
+function renderCharts(d){
+  if(patientChart) patientChart.destroy();
+  patientChart=new Chart(document.getElementById('patientChart'),{type:'line',data:{labels:d.patientTrend.labels,datasets:[{label:'Registrations',data:d.patientTrend.data,borderColor:'#5B21B6',backgroundColor:'rgba(91,33,182,0.08)',fill:true,tension:0.4,pointRadius:2}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:8}},y:{ticks:{font:{size:10}}}}}});
+  if(revenueChart) revenueChart.destroy();
+  revenueChart=new Chart(document.getElementById('revenueChart'),{type:'doughnut',data:{labels:d.revenuePie.labels,datasets:[{data:d.revenuePie.data,backgroundColor:['#5B21B6','#2563EB','#059669','#D97706','#DB2777'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{font:{size:11}}}}}});
+  if(opdIpdChart) opdIpdChart.destroy();
+  opdIpdChart=new Chart(document.getElementById('opdIpdChart'),{type:'bar',data:{labels:d.opdIpd.labels,datasets:[{label:'OPD',data:d.opdIpd.opd,backgroundColor:'rgba(37,99,235,0.7)',borderRadius:3},{label:'IPD',data:d.opdIpd.ipd,backgroundColor:'rgba(91,33,182,0.7)',borderRadius:3}]},options:{responsive:true,plugins:{legend:{position:'top',labels:{font:{size:11}}}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:8}},y:{ticks:{font:{size:10}}}}}});
+  if(deptChart) deptChart.destroy();
+  deptChart=new Chart(document.getElementById('deptChart'),{type:'bar',data:{labels:d.depts.labels,datasets:[{label:'Visits',data:d.depts.data,backgroundColor:'rgba(91,33,182,0.75)',borderRadius:4}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10}}}}}});
+}
+
+const reportMeta={
+  'patient-reg':{title:'Patient Registration Report',headers:['UHID','Patient Name','Age/Gender','Contact','Registered On','Blood Group'],rows:()=>gen(40,i=>[`UHID-CTY-${String(1001+i).padStart(5,'0')}`,`Patient ${i+1}`,`${20+i%60}/${i%2?'M':'F'}`,`98${String(i).padStart(8,'0')}`.slice(0,10),rDate(),'B+'])},
+  'opd':{title:'OPD Consultation Report',headers:['S.No','Patient','Doctor','Department','Diagnosis','Date','Fee'],rows:()=>gen(35,i=>[i+1,`Patient ${i+1}`,'Dr. Smith',['Cardiology','Ortho','General'][i%3],'Hypertension',rDate(),`₹${300+(i%5)*50}`])},
+  'ipd':{title:'IPD Admission Report',headers:['Adm. No','Patient','Ward','Bed','Admitted','Discharged','LOS','Status'],rows:()=>gen(20,i=>[`IPD${1000+i}`,`Patient ${i+1}`,['General','Private','ICU'][i%3],i+101,rDate(),i%4?rDate():'—',i%4?`${Math.floor(Math.random()*10+1)} days`:'—',i%4?'<span class="badge badge-success">Discharged</span>':'<span class="badge badge-warning">Admitted</span>'])},
+  'lab':{title:'Laboratory Report',headers:['Order No','Patient','Test','Ordered By','Status','Date','Amount'],rows:()=>gen(30,i=>[`LAB${2000+i}`,`Patient ${i+1}`,['CBC','LFT','RFT','Thyroid','HbA1c'][i%5],'Dr. Smith',i%3?'<span class="badge badge-success">Done</span>':'<span class="badge badge-warning">Pending</span>',rDate(),`₹${400+(i%8)*50}`])},
+  'appointment':{title:'Appointment Report',headers:['Token','Patient','Doctor','Date','Time','Type','Status'],rows:()=>gen(40,i=>[i+1,`Patient ${i+1}`,'Dr. Smith',rDate(),'10:00 AM',['New','Follow-up'][i%2],['<span class="badge badge-success">Attended</span>','<span class="badge badge-danger">No-Show</span>','<span class="badge badge-warning">Scheduled</span>'][i%3]])},
+  'billing':{title:'Billing Summary Report',headers:['Bill No','Patient','Date','Total','Discount','Paid','Balance','Status'],rows:()=>gen(35,i=>[`BILL-${String(i+1).padStart(6,'0')}`,`Patient ${i+1}`,rDate(),`₹${(2000+i*300).toLocaleString()}`,i%3?'—':'₹200',`₹${(2000+i*300).toLocaleString()}`,'₹0','<span class="badge badge-success">Paid</span>'])},
+  'collection':{title:'Daily Collection Report',headers:['Date','Cash','Card','UPI','Total','Cashier'],rows:()=>gen(30,i=>[rDate(),`₹${Math.floor(Math.random()*50000)}`,`₹${Math.floor(Math.random()*30000)}`,`₹${Math.floor(Math.random()*20000)}`,`₹${Math.floor(Math.random()*100000)}`,'Counter 1'])},
+  'outstanding':{title:'Outstanding Dues Report',headers:['Bill No','Patient','Bill Date','Total','Paid','Balance','Ageing'],rows:()=>gen(15,i=>[`BILL-${String(i+1).padStart(6,'0')}`,`Patient ${i+1}`,rDate(),`₹${3000+i*500}`,`₹1,000`,`₹${2000+i*500}`,['0-30 days','31-60 days','61-90 days','90+ days'][i%4]])},
+  'inventory-val':{title:'Inventory Valuation Report',headers:['Category','Item','Unit','Qty','Unit Cost','Total Value','Status'],rows:()=>gen(25,i=>[['Medicines','Surgical','Equipment'][i%3],`Item ${i+1}`,['Tablet','Strip','Piece'][i%3],Math.floor(Math.random()*500+10),`₹${10+i*5}`,`₹${Math.floor(Math.random()*5000)}`,i%5?'<span class="badge badge-success">OK</span>':'<span class="badge badge-danger">Low Stock</span>'])},
+  'attendance':{title:'Staff Attendance Report',headers:['Staff Name','Dept','Role','Present','Absent','Leave','Attendance %'],rows:()=>gen(20,i=>[`Staff ${i+1}`,['Nursing','Admin','Lab'][i%3],['Nurse','Receptionist','Technician'][i%3],22+i%5,i%5,1,`${Math.floor(((22+i%5)/(22+i%5+1))*100)}%`])},
+  'doctor-perf':{title:'Doctor Performance Report',headers:['Doctor','Specialty','OPD','IPD','Revenue','Avg Rating'],rows:()=>gen(10,i=>[`Dr. ${['Smith','Patel','Kumar','Sharma','Singh'][i%5]}`,['Cardiology','Ortho','General'][i%3],100+i*12,20+i*3,`₹${(50000+i*10000).toLocaleString()}`,`4.${Math.floor(Math.random()*5+5)}/5.0`])},
+  'bed-occ':{title:'Bed Occupancy Report',headers:['Ward','Total Beds','Occupied','Available','Occupancy %','Avg LOS'],rows:()=>gen(8,i=>[['General Male','General Female','Private','ICU','NICU','Pediatric','Maternity','Emergency'][i],30-i*2,20-i,10+i,`${Math.floor(((20-i)/(30-i*2))*100)}%`,`${3+i} days`])}
+};
+
+function rDate(){ const d=new Date(); d.setDate(d.getDate()-Math.floor(Math.random()*30)); return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function gen(n,fn){ return Array.from({length:n},(_,i)=>fn(i)); }
+
+function openDetailReport(type){
+  currentReport=type;
+  const m=reportMeta[type]; if(!m) return;
+  document.getElementById('detailModalTitle').textContent=m.title;
+  loadDetailData();
+  openModal('detailModal');
+}
+
+function loadDetailData(){
+  const m=reportMeta[currentReport]; if(!m) return;
+  document.getElementById('detailThead').innerHTML='<tr>'+m.headers.map(h=>`<th>${h}</th>`).join('')+'</tr>';
+  const rows=m.rows();
+  document.getElementById('detailEmpty').style.display=rows.length?'none':'flex';
+  document.getElementById('detailTbody').innerHTML=rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('');
+  lucide.createIcons();
+}
+
+applyPreset('month');
+</script>
+</body>
+</html>
