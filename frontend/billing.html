@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Billing – Easy Hospital</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-icon"><i data-lucide="activity"></i></div>
+        <div class="logo-text"><span class="logo-main">Easy</span><span class="logo-sub">Hospital</span></div>
+      </div>
+      <button class="sidebar-close" onclick="toggleSidebar()"><i data-lucide="x"></i></button>
+    </div>
+    <div id="sidebar-nav"></div>
+  </aside>
+  <div class="main-content">
+    <div id="topbar-container"></div>
+    <div class="page-content">
+
+      <div class="stats-grid">
+        <div class="stat-card purple"><div class="stat-icon"><i data-lucide="receipt"></i></div><div class="stat-info"><div class="stat-value" id="stat-total">—</div><div class="stat-label">Total Bills</div></div></div>
+        <div class="stat-card green"><div class="stat-icon"><i data-lucide="indian-rupee"></i></div><div class="stat-info"><div class="stat-value" id="stat-revenue">—</div><div class="stat-label">Today's Revenue</div></div></div>
+        <div class="stat-card yellow"><div class="stat-icon"><i data-lucide="clock"></i></div><div class="stat-info"><div class="stat-value" id="stat-pending">—</div><div class="stat-label">Pending Payment</div></div></div>
+        <div class="stat-card red"><div class="stat-icon"><i data-lucide="alert-circle"></i></div><div class="stat-info"><div class="stat-value" id="stat-outstanding">—</div><div class="stat-label">Outstanding Amount</div></div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="flex-between flex-wrap gap-3">
+          <div class="search-box">
+            <i data-lucide="search"></i>
+            <input type="text" id="search-input" placeholder="Search by bill no, patient name…" oninput="debounce(loadBills,300)()"/>
+          </div>
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+            <input type="date" id="filter-date" class="form-input" style="width:160px;" onchange="loadBills()"/>
+            <select id="filter-status" class="form-select" style="width:150px;" onchange="loadBills()">
+              <option value="">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="paid">Paid</option>
+              <option value="partial">Partial</option>
+            </select>
+            <button class="btn-primary" onclick="openNewBillModal()"><i data-lucide="plus"></i> New Bill</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Bill No.</th><th>Patient</th><th>Type</th><th>Items</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="bills-tbody"><tr><td colspan="9" class="text-center"><div class="loading-spinner"></div></td></tr></tbody>
+          </table>
+        </div>
+        <div id="pagination-container" class="pagination" style="margin-top:1rem;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Bill Modal -->
+<div class="modal-overlay" id="bill-modal">
+  <div class="modal modal-xl">
+    <div class="modal-header">
+      <h3>Create New Bill</h3>
+      <button class="btn-icon" onclick="closeModal('bill-modal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="margin-bottom:1rem;">
+        <div class="form-group" style="position:relative;">
+          <label class="form-label">Patient *</label>
+          <input type="text" id="bill-patient-search" class="form-input" placeholder="Search patient…" oninput="debounce(searchBillPatient,300)()"/>
+          <div id="bill-patient-suggestions" class="suggestions-box" style="display:none;"></div>
+          <input type="hidden" id="bill-patient-id"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bill Type</label>
+          <select id="bill-type" class="form-select">
+            <option value="opd">OPD</option><option value="ipd">IPD</option>
+            <option value="lab">Laboratory</option><option value="pharmacy">Pharmacy</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Discount (%)</label>
+          <input type="number" id="bill-discount" class="form-input" value="0" min="0" max="100" oninput="recalcBill()"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">GST (%)</label>
+          <input type="number" id="bill-gst" class="form-input" value="18" min="0" oninput="recalcBill()"/>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
+        <h4 style="font-weight:700;">Bill Items</h4>
+        <button class="btn-outline btn-sm" onclick="addBillRow()"><i data-lucide="plus"></i> Add Item</button>
+      </div>
+      <div class="table-container" style="margin-bottom:1rem;">
+        <table>
+          <thead><tr><th>Description</th><th>Category</th><th>Qty</th><th>Unit Price (₹)</th><th>Total</th><th></th></tr></thead>
+          <tbody id="bill-items-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Summary -->
+      <div style="display:flex;justify-content:flex-end;">
+        <div style="min-width:280px;border:1px solid var(--border);border-radius:.5rem;overflow:hidden;">
+          <div style="padding:.75rem 1rem;display:flex;justify-content:space-between;"><span>Subtotal</span><span id="calc-subtotal">₹0.00</span></div>
+          <div style="padding:.75rem 1rem;display:flex;justify-content:space-between;background:var(--bg-secondary);"><span>Discount</span><span id="calc-discount" style="color:var(--success);">-₹0.00</span></div>
+          <div style="padding:.75rem 1rem;display:flex;justify-content:space-between;"><span>GST</span><span id="calc-gst">+₹0.00</span></div>
+          <div style="padding:.75rem 1rem;display:flex;justify-content:space-between;background:var(--primary);color:white;font-weight:700;font-size:1rem;"><span>Total</span><span id="calc-total">₹0.00</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('bill-modal')">Cancel</button>
+      <button class="btn-primary" onclick="createBill()"><i data-lucide="receipt"></i> Generate Bill</button>
+    </div>
+  </div>
+</div>
+
+<!-- View Bill Modal -->
+<div class="modal-overlay" id="view-bill-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header"><h3>Bill Details</h3><button class="btn-icon" onclick="closeModal('view-bill-modal')"><i data-lucide="x"></i></button></div>
+    <div class="modal-body" id="view-bill-body"></div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="window.print()"><i data-lucide="printer"></i> Print</button>
+      <button id="mark-paid-btn" class="btn-success" onclick="markPaid()"><i data-lucide="check-circle"></i> Mark as Paid</button>
+      <button class="btn-outline" onclick="closeModal('view-bill-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  requireAuth(); renderSidebar('billing'); renderTopbar('Billing','Invoices and payment management'); lucide.createIcons();
+
+  let currentPage=1; const PER_PAGE=10;
+  let billRows=[], viewingBillId=null;
+
+  document.getElementById('filter-date').value = new Date().toISOString().split('T')[0];
+
+  async function loadBills() {
+    const search=document.getElementById('search-input').value;
+    const date=document.getElementById('filter-date').value;
+    const status=document.getElementById('filter-status').value;
+    let url=`/api/billing?page=${currentPage}&limit=${PER_PAGE}`;
+    if(search) url+=`&search=${encodeURIComponent(search)}`;
+    if(date) url+=`&date=${date}`;
+    if(status) url+=`&status=${status}`;
+    const res=await api.get(url);
+    const bills=res.bills||[];
+    const total=res.total||0;
+
+    document.getElementById('stat-total').textContent=total;
+    const paidToday=bills.filter(b=>b.payment_status==='paid').reduce((s,b)=>s+Number(b.total_amount||0),0);
+    document.getElementById('stat-revenue').textContent='₹'+paidToday.toLocaleString('en-IN',{maximumFractionDigits:0});
+    document.getElementById('stat-pending').textContent=bills.filter(b=>b.payment_status==='pending').length;
+    const outstanding=bills.filter(b=>b.payment_status!=='paid').reduce((s,b)=>s+Number(b.total_amount||0)-Number(b.paid_amount||0),0);
+    document.getElementById('stat-outstanding').textContent='₹'+outstanding.toLocaleString('en-IN',{maximumFractionDigits:0});
+
+    const tbody=document.getElementById('bills-tbody');
+    if(!bills.length){tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state"><i data-lucide="receipt"></i><p>No bills found</p></div></td></tr>`;lucide.createIcons();return;}
+    tbody.innerHTML=bills.map(b=>{
+      const bal=Number(b.total_amount||0)-Number(b.paid_amount||0);
+      return `<tr>
+        <td style="font-family:'Space Mono',monospace;font-weight:700;font-size:.8125rem;">${b.bill_number||'—'}</td>
+        <td><div style="font-weight:600;">${b.patient_name||'—'}</div><div style="font-size:.75rem;color:var(--text-muted);">${b.uhid||''}</div></td>
+        <td><span class="badge-info">${b.bill_type||'—'}</span></td>
+        <td>${b.items_count||'—'}</td>
+        <td style="font-weight:600;">₹${Number(b.total_amount||0).toLocaleString()}</td>
+        <td style="color:var(--success);">₹${Number(b.paid_amount||0).toLocaleString()}</td>
+        <td style="color:${bal>0?'var(--danger)':'var(--success)'};">₹${bal.toLocaleString()}</td>
+        <td><span class="badge-${b.payment_status==='paid'?'success':b.payment_status==='partial'?'warning':'danger'}">${formatStatus(b.payment_status)}</span></td>
+        <td><button class="btn-icon" title="View Bill" onclick="viewBill(${b.id})"><i data-lucide="eye"></i></button></td>
+      </tr>`;
+    }).join('');
+    renderPagination(total,currentPage,PER_PAGE,p=>{currentPage=p;loadBills();});
+    lucide.createIcons();
+  }
+
+  function openNewBillModal() {
+    document.getElementById('bill-patient-search').value='';
+    document.getElementById('bill-patient-id').value='';
+    document.getElementById('bill-discount').value='0';
+    document.getElementById('bill-gst').value='18';
+    billRows=[];
+    document.getElementById('bill-items-tbody').innerHTML='';
+    addBillRow(); addBillRow();
+    recalcBill();
+    openModal('bill-modal'); lucide.createIcons();
+  }
+
+  async function searchBillPatient() {
+    const q=document.getElementById('bill-patient-search').value;
+    if(q.length<2){document.getElementById('bill-patient-suggestions').style.display='none';return;}
+    const res=await api.get(`/api/patients?search=${encodeURIComponent(q)}&limit=5`);
+    const pts=res.patients||[];
+    const box=document.getElementById('bill-patient-suggestions');
+    if(!pts.length){box.style.display='none';return;}
+    box.innerHTML=pts.map(p=>`<div class="suggestion-item" onclick="selectBillPatient(${p.id},'${p.name} (${p.uhid})')"><strong>${p.name}</strong> <span style="color:var(--text-muted);">${p.uhid}</span></div>`).join('');
+    box.style.display='block';
+  }
+
+  function selectBillPatient(id,label){document.getElementById('bill-patient-id').value=id;document.getElementById('bill-patient-search').value=label;document.getElementById('bill-patient-suggestions').style.display='none';}
+
+  const CATEGORIES=['consultation','lab_test','medicine','procedure','bed_charge','other'];
+
+  function addBillRow() {
+    const id=Date.now()+Math.random();
+    billRows.push(id);
+    const tbody=document.getElementById('bill-items-tbody');
+    const tr=document.createElement('tr');
+    tr.id='bill-row-'+id;
+    tr.innerHTML=`
+      <td><input type="text" class="form-input" id="bi-desc-${id}" placeholder="Description" oninput="recalcBill()"/></td>
+      <td><select class="form-select" id="bi-cat-${id}">${CATEGORIES.map(c=>`<option value="${c}">${formatStatus(c)}</option>`).join('')}</select></td>
+      <td><input type="number" class="form-input" id="bi-qty-${id}" value="1" min="1" style="width:70px;" oninput="recalcBill()"/></td>
+      <td><input type="number" class="form-input" id="bi-price-${id}" placeholder="0" min="0" oninput="recalcBill()"/></td>
+      <td id="bi-total-${id}" style="font-weight:600;">₹0.00</td>
+      <td><button class="btn-icon" onclick="removeBillRow('${id}')"><i data-lucide="trash-2"></i></button></td>`;
+    tbody.appendChild(tr); lucide.createIcons();
+  }
+
+  function removeBillRow(id){document.getElementById('bill-row-'+id)?.remove();billRows=billRows.filter(r=>r!=id);recalcBill();}
+
+  function recalcBill() {
+    let subtotal=0;
+    billRows.forEach(id=>{
+      const qty=Number(document.getElementById(`bi-qty-${id}`)?.value||0);
+      const price=Number(document.getElementById(`bi-price-${id}`)?.value||0);
+      const total=qty*price;
+      const el=document.getElementById(`bi-total-${id}`);
+      if(el) el.textContent='₹'+total.toFixed(2);
+      subtotal+=total;
+    });
+    const disc=Number(document.getElementById('bill-discount').value||0);
+    const gst=Number(document.getElementById('bill-gst').value||0);
+    const discAmt=subtotal*disc/100;
+    const gstAmt=(subtotal-discAmt)*gst/100;
+    const total=subtotal-discAmt+gstAmt;
+    document.getElementById('calc-subtotal').textContent='₹'+subtotal.toFixed(2);
+    document.getElementById('calc-discount').textContent='-₹'+discAmt.toFixed(2);
+    document.getElementById('calc-gst').textContent='+₹'+gstAmt.toFixed(2);
+    document.getElementById('calc-total').textContent='₹'+total.toFixed(2);
+  }
+
+  async function createBill() {
+    const patientId=document.getElementById('bill-patient-id').value;
+    if(!patientId){showToast('Please select a patient.','error');return;}
+    const items=billRows.map(id=>({
+      description:document.getElementById(`bi-desc-${id}`)?.value?.trim(),
+      item_type:document.getElementById(`bi-cat-${id}`)?.value,
+      quantity:Number(document.getElementById(`bi-qty-${id}`)?.value||1),
+      unit_price:Number(document.getElementById(`bi-price-${id}`)?.value||0),
+    })).filter(i=>i.description&&i.unit_price>0);
+    if(!items.length){showToast('Please add at least one bill item.','error');return;}
+    const payload={
+      patient_id:patientId,
+      bill_type:document.getElementById('bill-type').value,
+      discount_percent:Number(document.getElementById('bill-discount').value||0),
+      gst_percent:Number(document.getElementById('bill-gst').value||0),
+      items,
+    };
+    try{const res=await api.post('/api/billing',payload);showToast('Bill created!','success');closeModal('bill-modal');loadBills();viewBill(res.bill?.id||res.id);}
+    catch(e){showToast(e.message||'Error creating bill','error');}
+  }
+
+  async function viewBill(id) {
+    viewingBillId=id;
+    const res=await api.get(`/api/billing/${id}`);
+    const b=res.bill||{};
+    const items=res.items||[];
+    const isPaid=b.payment_status==='paid';
+    document.getElementById('mark-paid-btn').style.display=isPaid?'none':'';
+    document.getElementById('view-bill-body').innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <div><label class="form-label">Bill Number</label><p style="font-family:'Space Mono',monospace;font-weight:700;">${b.bill_number}</p></div>
+        <div><label class="form-label">Date</label><p>${b.created_at?new Date(b.created_at).toLocaleDateString():''}</p></div>
+        <div><label class="form-label">Patient</label><p>${b.patient_name} (${b.uhid||''})</p></div>
+        <div><label class="form-label">Status</label><p><span class="badge-${b.payment_status==='paid'?'success':b.payment_status==='partial'?'warning':'danger'}">${formatStatus(b.payment_status)}</span></p></div>
+      </div>
+      <div class="table-container">
+        <table><thead><tr><th>Description</th><th>Category</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
+        <tbody>${items.map(i=>`<tr><td>${i.description}</td><td>${formatStatus(i.item_type||'')}</td><td>${i.quantity}</td><td>₹${Number(i.unit_price).toFixed(2)}</td><td>₹${Number(i.total_price||i.quantity*i.unit_price).toFixed(2)}</td></tr>`).join('')}</tbody></table>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:1rem;">
+        <div style="min-width:240px;">
+          <div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border);"><span>Subtotal</span><span>₹${Number(b.subtotal||0).toFixed(2)}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border);color:var(--success);"><span>Discount (${b.discount_percent||0}%)</span><span>-₹${Number(b.discount_amount||0).toFixed(2)}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border);"><span>GST (${b.gst_percent||0}%)</span><span>+₹${Number(b.gst_amount||0).toFixed(2)}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:.75rem 0;font-weight:700;font-size:1.125rem;"><span>Total</span><span>₹${Number(b.total_amount||0).toFixed(2)}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:.5rem 0;color:var(--success);"><span>Paid</span><span>₹${Number(b.paid_amount||0).toFixed(2)}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:.5rem 0;color:var(--danger);font-weight:600;"><span>Balance</span><span>₹${(Number(b.total_amount||0)-Number(b.paid_amount||0)).toFixed(2)}</span></div>
+        </div>
+      </div>`;
+    openModal('view-bill-modal'); lucide.createIcons();
+  }
+
+  async function markPaid() {
+    if(!viewingBillId) return;
+    try{await api.put(`/api/billing/${viewingBillId}/payment`,{payment_status:'paid',paid_amount:null});showToast('Bill marked as paid!','success');closeModal('view-bill-modal');loadBills();}
+    catch(e){showToast(e.message||'Error updating payment','error');}
+  }
+
+  function renderPagination(total,page,perPage,cb){
+    const pages=Math.ceil(total/perPage),c=document.getElementById('pagination-container');
+    if(pages<=1){c.innerHTML='';return;}
+    c.innerHTML=`<button class="btn-outline btn-sm" ${page===1?'disabled':''} onclick="(${cb})(${page-1})">←</button>`
+      +Array.from({length:pages},(_,i)=>`<button class="btn-${i+1===page?'primary':'outline'} btn-sm" onclick="(${cb})(${i+1})">${i+1}</button>`).join('')
+      +`<button class="btn-outline btn-sm" ${page===pages?'disabled':''} onclick="(${cb})(${page+1})">→</button>`;
+  }
+
+  loadBills();
+</script>
+</body>
+</html>
