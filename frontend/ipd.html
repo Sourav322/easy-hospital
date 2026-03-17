@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>IPD – Easy Hospital</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-icon"><i data-lucide="activity"></i></div>
+        <div class="logo-text"><span class="logo-main">Easy</span><span class="logo-sub">Hospital</span></div>
+      </div>
+      <button class="sidebar-close" onclick="toggleSidebar()"><i data-lucide="x"></i></button>
+    </div>
+    <div id="sidebar-nav"></div>
+  </aside>
+  <div class="main-content">
+    <div id="topbar-container"></div>
+    <div class="page-content">
+
+      <div class="stats-grid">
+        <div class="stat-card purple"><div class="stat-icon"><i data-lucide="bed"></i></div><div class="stat-info"><div class="stat-value" id="stat-admitted">—</div><div class="stat-label">Currently Admitted</div></div></div>
+        <div class="stat-card green"><div class="stat-icon"><i data-lucide="log-out"></i></div><div class="stat-info"><div class="stat-value" id="stat-discharged">—</div><div class="stat-label">Discharged Today</div></div></div>
+        <div class="stat-card blue"><div class="stat-icon"><i data-lucide="grid"></i></div><div class="stat-info"><div class="stat-value" id="stat-beds-avail">—</div><div class="stat-label">Available Beds</div></div></div>
+        <div class="stat-card red"><div class="stat-icon"><i data-lucide="alert-circle"></i></div><div class="stat-info"><div class="stat-value" id="stat-beds-occ">—</div><div class="stat-label">Occupied Beds</div></div></div>
+      </div>
+
+      <!-- Tabs: Admissions / Ward View -->
+      <div class="tabs" style="margin-bottom:1.5rem;">
+        <button class="tab-btn active" onclick="switchTab('admissions',event)">Admissions</button>
+        <button class="tab-btn" onclick="switchTab('wards',event)">Ward & Beds</button>
+      </div>
+
+      <!-- Admissions Tab -->
+      <div id="tab-admissions">
+        <div class="card" style="margin-bottom:1.5rem;">
+          <div class="flex-between flex-wrap gap-3">
+            <div class="search-box">
+              <i data-lucide="search"></i>
+              <input type="text" id="search-input" placeholder="Search patient name or UHID…" oninput="debounce(loadAdmissions,300)()"/>
+            </div>
+            <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+              <select id="filter-status" class="form-select" style="width:150px;" onchange="loadAdmissions()">
+                <option value="">All Status</option>
+                <option value="admitted">Admitted</option>
+                <option value="discharged">Discharged</option>
+              </select>
+              <button class="btn-primary" onclick="openAdmitModal()"><i data-lucide="plus"></i> Admit Patient</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="table-container">
+            <table>
+              <thead><tr><th>Admission No.</th><th>Patient</th><th>Ward / Bed</th><th>Doctor</th><th>Admitted On</th><th>Diagnosis</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="admissions-tbody"><tr><td colspan="8" class="text-center"><div class="loading-spinner"></div></td></tr></tbody>
+            </table>
+          </div>
+          <div id="pagination-container" class="pagination" style="margin-top:1rem;"></div>
+        </div>
+      </div>
+
+      <!-- Wards Tab -->
+      <div id="tab-wards" style="display:none;">
+        <div id="wards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.5rem;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Admit Patient Modal -->
+<div class="modal-overlay" id="admit-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>Admit Patient</h3>
+      <button class="btn-icon" onclick="closeModal('admit-modal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group" style="position:relative;">
+          <label class="form-label">Patient *</label>
+          <input type="text" id="admit-patient-search" class="form-input" placeholder="Search patient…" oninput="debounce(searchAdmitPatient,300)()"/>
+          <div id="admit-patient-suggestions" class="suggestions-box" style="display:none;"></div>
+          <input type="hidden" id="admit-patient-id"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Admitting Doctor *</label>
+          <select id="admit-doctor" class="form-select"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ward *</label>
+          <select id="admit-ward" class="form-select" onchange="loadAvailableBeds()"><option value="">Select Ward</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bed *</label>
+          <select id="admit-bed" class="form-select"><option value="">Select Ward First</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Admission Type</label>
+          <select id="admit-type" class="form-select">
+            <option value="general">General</option>
+            <option value="emergency">Emergency</option>
+            <option value="surgery">Surgery</option>
+            <option value="maternity">Maternity</option>
+            <option value="icu">ICU</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Admission Date</label>
+          <input type="datetime-local" id="admit-date" class="form-input"/>
+        </div>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label class="form-label">Diagnosis / Reason</label>
+          <textarea id="admit-diagnosis" class="form-textarea" rows="2" placeholder="Diagnosis or reason for admission…"></textarea>
+        </div>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label class="form-label">Notes</label>
+          <textarea id="admit-notes" class="form-textarea" rows="2" placeholder="Additional notes…"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('admit-modal')">Cancel</button>
+      <button class="btn-primary" onclick="admitPatient()"><i data-lucide="bed"></i> Confirm Admission</button>
+    </div>
+  </div>
+</div>
+
+<!-- Discharge Modal -->
+<div class="modal-overlay" id="discharge-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Discharge Patient</h3>
+      <button class="btn-icon" onclick="closeModal('discharge-modal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="discharge-id"/>
+      <div class="form-group"><label class="form-label">Discharge Date</label><input type="datetime-local" id="discharge-date" class="form-input"/></div>
+      <div class="form-group"><label class="form-label">Discharge Summary</label><textarea id="discharge-summary" class="form-textarea" rows="3" placeholder="Discharge summary and instructions…"></textarea></div>
+      <div class="form-group"><label class="form-label">Discharge Condition</label>
+        <select id="discharge-condition" class="form-select">
+          <option value="improved">Improved</option><option value="recovered">Recovered</option>
+          <option value="transferred">Transferred</option><option value="lama">LAMA</option><option value="deceased">Deceased</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('discharge-modal')">Cancel</button>
+      <button class="btn-success" onclick="dischargePatient()"><i data-lucide="log-out"></i> Discharge</button>
+    </div>
+  </div>
+</div>
+
+<!-- Nurse Notes Modal -->
+<div class="modal-overlay" id="nurse-notes-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Add Nurse Note</h3>
+      <button class="btn-icon" onclick="closeModal('nurse-notes-modal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="note-admission-id"/>
+      <div class="form-group"><label class="form-label">Note Type</label>
+        <select id="note-type" class="form-select">
+          <option value="vital_signs">Vital Signs</option><option value="medication">Medication Given</option>
+          <option value="observation">Observation</option><option value="general">General Note</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Note *</label><textarea id="note-text" class="form-textarea" rows="4" placeholder="Write nurse note…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('nurse-notes-modal')">Cancel</button>
+      <button class="btn-primary" onclick="saveNote()"><i data-lucide="save"></i> Save Note</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  requireAuth(); renderSidebar('ipd'); renderTopbar('IPD','Inpatient Department management'); lucide.createIcons();
+
+  let currentPage=1; const PER_PAGE=10;
+  document.getElementById('admit-date').value = new Date().toISOString().slice(0,16);
+
+  function switchTab(name, e) {
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    document.getElementById('tab-admissions').style.display = name==='admissions'?'block':'none';
+    document.getElementById('tab-wards').style.display = name==='wards'?'block':'none';
+    if(name==='wards') loadWards();
+  }
+
+  async function loadWards() {
+    const res = await api.get('/api/ipd/wards');
+    const wards = res.wards||[];
+    document.getElementById('stat-beds-avail').textContent = wards.reduce((s,w)=>s+Number(w.available_beds||0),0);
+    document.getElementById('stat-beds-occ').textContent = wards.reduce((s,w)=>s+Number(w.occupied_beds||0),0);
+    const grid = document.getElementById('wards-grid');
+    if(!wards.length){grid.innerHTML='<p style="color:var(--text-muted);">No wards found.</p>';return;}
+    grid.innerHTML = wards.map(w=>{
+      const total=Number(w.total_beds||0), occ=Number(w.occupied_beds||0), avail=total-occ;
+      const pct=total?Math.round(occ/total*100):0;
+      return `<div class="card">
+        <div class="flex-between" style="margin-bottom:.75rem;">
+          <div><div style="font-weight:700;font-size:1rem;">${w.name}</div><div style="font-size:.8125rem;color:var(--text-muted);">${w.ward_type||''}</div></div>
+          <span class="badge-${pct>=90?'danger':pct>=60?'warning':'success'}">${pct}% Full</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;text-align:center;margin-bottom:.75rem;">
+          <div style="padding:.5rem;background:var(--bg-secondary);border-radius:.5rem;"><div style="font-weight:700;">${total}</div><div style="font-size:.75rem;color:var(--text-muted);">Total</div></div>
+          <div style="padding:.5rem;background:rgba(220,38,38,.06);border-radius:.5rem;"><div style="font-weight:700;color:var(--danger);">${occ}</div><div style="font-size:.75rem;color:var(--text-muted);">Occupied</div></div>
+          <div style="padding:.5rem;background:rgba(34,197,94,.06);border-radius:.5rem;"><div style="font-weight:700;color:var(--success);">${avail}</div><div style="font-size:.75rem;color:var(--text-muted);">Available</div></div>
+        </div>
+        <div style="height:6px;background:var(--border);border-radius:3px;">
+          <div style="height:100%;width:${pct}%;background:${pct>=90?'var(--danger)':pct>=60?'var(--warning)':'var(--success)'};border-radius:3px;transition:width .3s;"></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function loadAdmissions() {
+    const search=document.getElementById('search-input').value;
+    const status=document.getElementById('filter-status').value;
+    let url=`/api/ipd?page=${currentPage}&limit=${PER_PAGE}`;
+    if(search) url+=`&search=${encodeURIComponent(search)}`;
+    if(status) url+=`&status=${status}`;
+    const res=await api.get(url);
+    const adms=res.admissions||[];
+    const total=res.total||0;
+    document.getElementById('stat-admitted').textContent=adms.filter(a=>a.status==='admitted').length;
+    document.getElementById('stat-discharged').textContent=adms.filter(a=>a.status==='discharged').length;
+
+    const tbody=document.getElementById('admissions-tbody');
+    if(!adms.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><i data-lucide="bed"></i><p>No admissions found</p></div></td></tr>`;lucide.createIcons();return;}
+    tbody.innerHTML=adms.map(a=>`<tr>
+      <td style="font-family:'Space Mono',monospace;font-size:.8125rem;font-weight:700;">ADM-${String(a.id).padStart(5,'0')}</td>
+      <td><div style="font-weight:600;">${a.patient_name||'—'}</div><div style="font-size:.75rem;color:var(--text-muted);">${a.uhid||''}</div></td>
+      <td>${a.ward_name||'—'} / <strong>${a.bed_number||'—'}</strong></td>
+      <td>${a.doctor_name||'—'}</td>
+      <td style="font-size:.8125rem;">${a.admission_date?new Date(a.admission_date).toLocaleDateString():''}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.diagnosis||'—'}</td>
+      <td><span class="badge-${a.status==='admitted'?'warning':a.status==='discharged'?'success':'secondary'}">${formatStatus(a.status)}</span></td>
+      <td><div style="display:flex;gap:.5rem;">
+        ${a.status==='admitted'?`
+          <button class="btn-icon" title="Nurse Note" onclick="openNurseNote(${a.id})"><i data-lucide="file-plus"></i></button>
+          <button class="btn-icon" title="Discharge" onclick="openDischarge(${a.id})"><i data-lucide="log-out"></i></button>
+        `:'<span style="color:var(--text-muted);font-size:.8125rem;">Discharged</span>'}
+      </div></td>
+    </tr>`).join('');
+    renderPagination(total,currentPage,PER_PAGE,p=>{currentPage=p;loadAdmissions();});
+    lucide.createIcons();
+  }
+
+  async function openAdmitModal() {
+    const [docRes, wardRes] = await Promise.all([api.get('/api/doctors?limit=100'), api.get('/api/ipd/wards')]);
+    const docs=docRes.doctors||[], wards=wardRes.wards||[];
+    document.getElementById('admit-doctor').innerHTML=docs.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+    document.getElementById('admit-ward').innerHTML='<option value="">Select Ward</option>'+wards.map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
+    document.getElementById('admit-patient-search').value='';
+    document.getElementById('admit-patient-id').value='';
+    document.getElementById('admit-patient-suggestions').style.display='none';
+    document.getElementById('admit-diagnosis').value='';
+    document.getElementById('admit-notes').value='';
+    openModal('admit-modal'); lucide.createIcons();
+  }
+
+  async function loadAvailableBeds() {
+    const wardId=document.getElementById('admit-ward').value;
+    if(!wardId){document.getElementById('admit-bed').innerHTML='<option value="">Select Ward First</option>';return;}
+    const res=await api.get(`/api/ipd/beds/${wardId}`);
+    const beds=(res.beds||[]).filter(b=>b.status==='available');
+    document.getElementById('admit-bed').innerHTML=beds.length
+      ? beds.map(b=>`<option value="${b.id}">${b.bed_number} (${b.bed_type||'general'})</option>`).join('')
+      : '<option value="">No beds available</option>';
+  }
+
+  async function searchAdmitPatient() {
+    const q=document.getElementById('admit-patient-search').value;
+    if(q.length<2){document.getElementById('admit-patient-suggestions').style.display='none';return;}
+    const res=await api.get(`/api/patients?search=${encodeURIComponent(q)}&limit=5`);
+    const patients=res.patients||[];
+    const box=document.getElementById('admit-patient-suggestions');
+    if(!patients.length){box.style.display='none';return;}
+    box.innerHTML=patients.map(p=>`<div class="suggestion-item" onclick="selectAdmitPatient(${p.id},'${p.name} (${p.uhid})')"><strong>${p.name}</strong> <span style="color:var(--text-muted);">${p.uhid} · ${p.phone||''}</span></div>`).join('');
+    box.style.display='block';
+  }
+
+  function selectAdmitPatient(id, label) {
+    document.getElementById('admit-patient-id').value=id;
+    document.getElementById('admit-patient-search').value=label;
+    document.getElementById('admit-patient-suggestions').style.display='none';
+  }
+
+  async function admitPatient() {
+    const patientId=document.getElementById('admit-patient-id').value;
+    const doctorId=document.getElementById('admit-doctor').value;
+    const bedId=document.getElementById('admit-bed').value;
+    if(!patientId||!doctorId||!bedId){showToast('Please fill all required fields.','error');return;}
+    const payload={
+      patient_id:patientId, doctor_id:doctorId, bed_id:bedId,
+      admission_type:document.getElementById('admit-type').value,
+      admission_date:document.getElementById('admit-date').value,
+      diagnosis:document.getElementById('admit-diagnosis').value.trim(),
+      notes:document.getElementById('admit-notes').value.trim(),
+    };
+    try{await api.post('/api/ipd',payload);showToast('Patient admitted!','success');closeModal('admit-modal');loadAdmissions();loadWards();}
+    catch(e){showToast(e.message||'Error admitting patient','error');}
+  }
+
+  function openDischarge(id) {
+    document.getElementById('discharge-id').value=id;
+    document.getElementById('discharge-date').value=new Date().toISOString().slice(0,16);
+    document.getElementById('discharge-summary').value='';
+    openModal('discharge-modal'); lucide.createIcons();
+  }
+
+  async function dischargePatient() {
+    const id=document.getElementById('discharge-id').value;
+    const payload={
+      discharge_date:document.getElementById('discharge-date').value,
+      discharge_summary:document.getElementById('discharge-summary').value.trim(),
+      discharge_condition:document.getElementById('discharge-condition').value,
+    };
+    try{await api.post(`/api/ipd/${id}/discharge`,payload);showToast('Patient discharged!','success');closeModal('discharge-modal');loadAdmissions();loadWards();}
+    catch(e){showToast(e.message||'Error discharging','error');}
+  }
+
+  function openNurseNote(id) {
+    document.getElementById('note-admission-id').value=id;
+    document.getElementById('note-text').value='';
+    openModal('nurse-notes-modal'); lucide.createIcons();
+  }
+
+  async function saveNote() {
+    const id=document.getElementById('note-admission-id').value;
+    const payload={note_type:document.getElementById('note-type').value, notes:document.getElementById('note-text').value.trim()};
+    if(!payload.notes){showToast('Please enter a note.','error');return;}
+    try{await api.post(`/api/ipd/${id}/notes`,payload);showToast('Note saved!','success');closeModal('nurse-notes-modal');}
+    catch(e){showToast(e.message||'Error saving note','error');}
+  }
+
+  function renderPagination(total,page,perPage,cb){
+    const pages=Math.ceil(total/perPage),c=document.getElementById('pagination-container');
+    if(pages<=1){c.innerHTML='';return;}
+    c.innerHTML=`<button class="btn-outline btn-sm" ${page===1?'disabled':''} onclick="(${cb})(${page-1})">←</button>`
+      +Array.from({length:pages},(_,i)=>`<button class="btn-${i+1===page?'primary':'outline'} btn-sm" onclick="(${cb})(${i+1})">${i+1}</button>`).join('')
+      +`<button class="btn-outline btn-sm" ${page===pages?'disabled':''} onclick="(${cb})(${page+1})">→</button>`;
+  }
+
+  loadAdmissions(); loadWards();
+</script>
+</body>
+</html>
