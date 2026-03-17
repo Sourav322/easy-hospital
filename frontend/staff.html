@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Staff – Easy Hospital</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-icon"><i data-lucide="activity"></i></div>
+        <div class="logo-text"><span class="logo-main">Easy</span><span class="logo-sub">Hospital</span></div>
+      </div>
+      <button class="sidebar-close" onclick="toggleSidebar()"><i data-lucide="x"></i></button>
+    </div>
+    <div id="sidebar-nav"></div>
+  </aside>
+  <div class="main-content">
+    <div id="topbar-container"></div>
+    <div class="page-content">
+
+      <div class="stats-grid">
+        <div class="stat-card purple"><div class="stat-icon"><i data-lucide="users"></i></div><div class="stat-info"><div class="stat-value" id="stat-total">—</div><div class="stat-label">Total Staff</div></div></div>
+        <div class="stat-card green"><div class="stat-icon"><i data-lucide="user-check"></i></div><div class="stat-info"><div class="stat-value" id="stat-active">—</div><div class="stat-label">Active</div></div></div>
+        <div class="stat-card blue"><div class="stat-icon"><i data-lucide="stethoscope"></i></div><div class="stat-info"><div class="stat-value" id="stat-doctors">—</div><div class="stat-label">Doctors</div></div></div>
+        <div class="stat-card yellow"><div class="stat-icon"><i data-lucide="clipboard"></i></div><div class="stat-info"><div class="stat-value" id="stat-nurses">—</div><div class="stat-label">Nurses</div></div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="flex-between flex-wrap gap-3">
+          <div class="search-box">
+            <i data-lucide="search"></i>
+            <input type="text" id="search-input" placeholder="Search by name, email…" oninput="debounce(loadStaff,300)()"/>
+          </div>
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+            <select id="filter-role" class="form-select" style="width:160px;" onchange="loadStaff()">
+              <option value="">All Roles</option>
+              <option value="doctor">Doctor</option>
+              <option value="nurse">Nurse</option>
+              <option value="receptionist">Receptionist</option>
+              <option value="lab_tech">Lab Tech</option>
+              <option value="billing">Billing</option>
+              <option value="hospital_admin">Admin</option>
+            </select>
+            <button class="btn-outline" onclick="openModal('attendance-modal')"><i data-lucide="calendar-check"></i> Mark Attendance</button>
+            <button class="btn-primary" onclick="openAddStaffModal()"><i data-lucide="user-plus"></i> Add Staff</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Staff Member</th><th>Role</th><th>Department</th><th>Phone</th><th>Email</th><th>Join Date</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="staff-tbody"><tr><td colspan="8" class="text-center"><div class="loading-spinner"></div></td></tr></tbody>
+          </table>
+        </div>
+        <div id="pagination-container" class="pagination" style="margin-top:1rem;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Staff Modal -->
+<div class="modal-overlay" id="add-staff-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="staff-modal-title">Add Staff Member</h3>
+      <button class="btn-icon" onclick="closeModal('add-staff-modal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="staff-id"/>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Full Name *</label><input type="text" id="s-name" class="form-input" placeholder="Full name"/></div>
+        <div class="form-group"><label class="form-label">Email *</label><input type="email" id="s-email" class="form-input" placeholder="email@hospital.com"/></div>
+        <div class="form-group"><label class="form-label">Phone</label><input type="tel" id="s-phone" class="form-input" placeholder="+91 98765 43210"/></div>
+        <div class="form-group"><label class="form-label">Role *</label>
+          <select id="s-role" class="form-select">
+            <option value="receptionist">Receptionist</option>
+            <option value="nurse">Nurse</option>
+            <option value="lab_tech">Lab Technician</option>
+            <option value="billing">Billing Staff</option>
+            <option value="hospital_admin">Hospital Admin</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Department</label><select id="s-dept" class="form-select"><option value="">Select Department</option></select></div>
+        <div class="form-group"><label class="form-label">Gender</label>
+          <select id="s-gender" class="form-select"><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Join Date</label><input type="date" id="s-join" class="form-input"/></div>
+        <div class="form-group"><label class="form-label">Salary (₹)</label><input type="number" id="s-salary" class="form-input" placeholder="25000"/></div>
+        <div id="s-pwd-group" class="form-group"><label class="form-label">Password *</label><input type="password" id="s-password" class="form-input" placeholder="Min 8 characters"/></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('add-staff-modal')">Cancel</button>
+      <button class="btn-primary" onclick="saveStaff()"><i data-lucide="save"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Attendance Modal -->
+<div class="modal-overlay" id="attendance-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Mark Attendance</h3>
+      <button class="btn-icon" onclick="closeModal('attendance-modal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Staff Member *</label>
+        <select id="att-staff" class="form-select"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input type="date" id="att-date" class="form-input"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status *</label>
+        <select id="att-status" class="form-select">
+          <option value="present">Present</option>
+          <option value="absent">Absent</option>
+          <option value="half_day">Half Day</option>
+          <option value="leave">On Leave</option>
+        </select>
+      </div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Check In</label><input type="time" id="att-in" class="form-input" value="09:00"/></div>
+        <div class="form-group"><label class="form-label">Check Out</label><input type="time" id="att-out" class="form-input" value="17:00"/></div>
+      </div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea id="att-notes" class="form-textarea" rows="2" placeholder="Optional notes…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('attendance-modal')">Cancel</button>
+      <button class="btn-primary" onclick="saveAttendance()"><i data-lucide="calendar-check"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  requireAuth(); renderSidebar('staff'); renderTopbar('Staff','Manage hospital personnel'); lucide.createIcons();
+
+  let currentPage=1; const PER_PAGE=12;
+  let editingStaffId=null, allStaff=[];
+
+  const ROLE_LABELS={super_admin:'Super Admin',hospital_admin:'Admin',doctor:'Doctor',receptionist:'Receptionist',nurse:'Nurse',lab_tech:'Lab Tech',billing:'Billing',staff:'Staff'};
+  const ROLE_COLORS={hospital_admin:'purple',doctor:'blue',nurse:'green',receptionist:'info',lab_tech:'yellow',billing:'secondary'};
+
+  function initials(n){return(n||'').split(' ').map(x=>x[0]).join('').toUpperCase().slice(0,2);}
+
+  async function loadDepartments(){
+    const res=await api.get('/api/doctors/departments');
+    const depts=res.departments||[];
+    document.getElementById('s-dept').innerHTML='<option value="">Select Department</option>'+depts.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  }
+
+  async function loadStaff(){
+    const search=document.getElementById('search-input').value;
+    const role=document.getElementById('filter-role').value;
+    let url=`/api/staff?page=${currentPage}&limit=${PER_PAGE}`;
+    if(search) url+=`&search=${encodeURIComponent(search)}`;
+    if(role) url+=`&role=${role}`;
+    const res=await api.get(url);
+    const staff=res.staff||[];
+    const total=res.total||0;
+    allStaff=staff;
+
+    document.getElementById('stat-total').textContent=total;
+    document.getElementById('stat-active').textContent=staff.filter(s=>s.is_active).length;
+    document.getElementById('stat-doctors').textContent=staff.filter(s=>s.role==='doctor').length;
+    document.getElementById('stat-nurses').textContent=staff.filter(s=>s.role==='nurse').length;
+
+    // Populate attendance staff select
+    const attSel=document.getElementById('att-staff');
+    attSel.innerHTML=staff.map(s=>`<option value="${s.id}">${s.name} (${ROLE_LABELS[s.role]||s.role})</option>`).join('');
+
+    const tbody=document.getElementById('staff-tbody');
+    if(!staff.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><i data-lucide="users"></i><p>No staff found</p></div></td></tr>`;lucide.createIcons();return;}
+    tbody.innerHTML=staff.map(s=>`<tr>
+      <td><div style="display:flex;align-items:center;gap:.75rem;"><div class="avatar-circle">${initials(s.name)}</div><div><div style="font-weight:600;">${s.name}</div></div></div></td>
+      <td><span class="badge-${ROLE_COLORS[s.role]||'secondary'}">${ROLE_LABELS[s.role]||s.role}</span></td>
+      <td>${s.department_name||'—'}</td>
+      <td>${s.phone||'—'}</td>
+      <td style="font-size:.8125rem;">${s.email||'—'}</td>
+      <td style="font-size:.8125rem;">${s.join_date?new Date(s.join_date).toLocaleDateString():'—'}</td>
+      <td><span class="badge-${s.is_active?'success':'secondary'}">${s.is_active?'Active':'Inactive'}</span></td>
+      <td><button class="btn-icon" title="Edit" onclick="editStaff(${s.id})"><i data-lucide="edit"></i></button></td>
+    </tr>`).join('');
+    renderPagination(total,currentPage,PER_PAGE,p=>{currentPage=p;loadStaff();});
+    lucide.createIcons();
+  }
+
+  function openAddStaffModal(){
+    editingStaffId=null;
+    document.getElementById('staff-modal-title').textContent='Add Staff Member';
+    ['s-name','s-email','s-phone','s-salary','s-password'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('s-role').value='receptionist';
+    document.getElementById('s-dept').value='';
+    document.getElementById('s-gender').value='';
+    document.getElementById('s-join').value=new Date().toISOString().split('T')[0];
+    document.getElementById('s-pwd-group').style.display='block';
+    openModal('add-staff-modal'); lucide.createIcons();
+  }
+
+  function editStaff(id){
+    const s=allStaff.find(x=>x.id==id);
+    if(!s) return;
+    editingStaffId=id;
+    document.getElementById('staff-modal-title').textContent='Edit Staff Member';
+    document.getElementById('s-name').value=s.name||'';
+    document.getElementById('s-email').value=s.email||'';
+    document.getElementById('s-phone').value=s.phone||'';
+    document.getElementById('s-role').value=s.role||'';
+    document.getElementById('s-dept').value=s.department_id||'';
+    document.getElementById('s-gender').value=s.gender||'';
+    document.getElementById('s-join').value=s.join_date?s.join_date.split('T')[0]:'';
+    document.getElementById('s-salary').value=s.salary||'';
+    document.getElementById('s-pwd-group').style.display='none';
+    openModal('add-staff-modal'); lucide.createIcons();
+  }
+
+  async function saveStaff(){
+    const name=document.getElementById('s-name').value.trim();
+    const email=document.getElementById('s-email').value.trim();
+    const role=document.getElementById('s-role').value;
+    if(!name||!email||!role){showToast('Name, email and role are required.','error');return;}
+    const payload={name,email,role,phone:document.getElementById('s-phone').value.trim(),department_id:document.getElementById('s-dept').value||null,gender:document.getElementById('s-gender').value,join_date:document.getElementById('s-join').value||null,salary:document.getElementById('s-salary').value||null};
+    if(!editingStaffId) payload.password=document.getElementById('s-password').value;
+    try{
+      if(editingStaffId) await api.put(`/api/staff/${editingStaffId}`,payload);
+      else await api.post('/api/staff',payload);
+      showToast(editingStaffId?'Staff updated!':'Staff added!','success');
+      closeModal('add-staff-modal'); loadStaff();
+    }catch(e){showToast(e.message||'Error saving staff','error');}
+  }
+
+  async function saveAttendance(){
+    const staffId=document.getElementById('att-staff').value;
+    if(!staffId){showToast('Please select a staff member.','error');return;}
+    const payload={staff_id:staffId,date:document.getElementById('att-date').value,status:document.getElementById('att-status').value,check_in:document.getElementById('att-in').value,check_out:document.getElementById('att-out').value,notes:document.getElementById('att-notes').value.trim()};
+    try{await api.post('/api/staff/attendance',payload);showToast('Attendance marked!','success');closeModal('attendance-modal');}
+    catch(e){showToast(e.message||'Error marking attendance','error');}
+  }
+
+  function renderPagination(total,page,perPage,cb){
+    const pages=Math.ceil(total/perPage),c=document.getElementById('pagination-container');
+    if(pages<=1){c.innerHTML='';return;}
+    c.innerHTML=`<button class="btn-outline btn-sm" ${page===1?'disabled':''} onclick="(${cb})(${page-1})">←</button>`
+      +Array.from({length:pages},(_,i)=>`<button class="btn-${i+1===page?'primary':'outline'} btn-sm" onclick="(${cb})(${i+1})">${i+1}</button>`).join('')
+      +`<button class="btn-outline btn-sm" ${page===pages?'disabled':''} onclick="(${cb})(${page+1})">→</button>`;
+  }
+
+  document.getElementById('att-date').value=new Date().toISOString().split('T')[0];
+  (async()=>{await loadDepartments();loadStaff();lucide.createIcons();})();
+</script>
+</body>
+</html>
