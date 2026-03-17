@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointments – Easy Hospital</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-layout">
+    <div id="sidebar-container"></div>
+    <div class="main-content">
+        <div id="topbar-container"></div>
+        <div class="page-content">
+
+            <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">
+                <div class="stat-card purple"><div class="stat-icon purple">📅</div><div class="stat-info"><div class="stat-value" id="s_total">–</div><div class="stat-label">Today Total</div></div></div>
+                <div class="stat-card green"><div class="stat-icon green">✅</div><div class="stat-info"><div class="stat-value" id="s_comp">–</div><div class="stat-label">Completed</div></div></div>
+                <div class="stat-card yellow"><div class="stat-icon yellow">⏳</div><div class="stat-info"><div class="stat-value" id="s_wait">–</div><div class="stat-label">Scheduled</div></div></div>
+                <div class="stat-card red"><div class="stat-icon red">❌</div><div class="stat-info"><div class="stat-value" id="s_canc">–</div><div class="stat-label">Cancelled</div></div></div>
+            </div>
+
+            <div class="table-container">
+                <div class="table-header">
+                    <div><div class="card-title">Appointment Management</div></div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                        <input type="date" id="dateFilter" class="form-input" style="width:160px;" value="${new Date().toISOString().split('T')[0]}">
+                        <select id="statusFilter" class="form-select" style="width:130px;">
+                            <option value="">All Status</option>
+                            <option value="scheduled">Scheduled</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="openModal('bookApptModal')">+ Book Appointment</button>
+                    </div>
+                </div>
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Token</th>
+                                <th>Patient</th>
+                                <th>Doctor</th>
+                                <th>Date & Time</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="apptTable"><tr><td colspan="7" style="text-align:center;padding:40px;color:#9CA3AF;">Loading...</td></tr></tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="pagination"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Book Appointment Modal -->
+<div class="modal-overlay" id="bookApptModal">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title">📅 Book Appointment</div>
+            <button class="modal-close" onclick="closeModal('bookApptModal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Search Patient <span class="required">*</span></label>
+                <input type="text" id="patientSearch" class="form-input" placeholder="Search by name or phone..." oninput="searchPatients()">
+                <div id="patientSuggestions" style="position:absolute;z-index:100;background:white;border:1px solid #E5E7EB;border-radius:8px;width:100%;max-height:160px;overflow-y:auto;display:none;"></div>
+                <input type="hidden" id="selectedPatientId">
+                <div id="selectedPatientInfo" style="margin-top:8px;"></div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Doctor <span class="required">*</span></label>
+                <select id="doctorSelect" class="form-select"><option value="">Select Doctor</option></select>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Appointment Date <span class="required">*</span></label>
+                    <input type="date" id="apptDate" class="form-input" min="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Appointment Time</label>
+                    <input type="time" id="apptTime" class="form-input">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Type</label>
+                <select id="apptType" class="form-select">
+                    <option value="scheduled">Scheduled</option>
+                    <option value="walk-in">Walk-in</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Chief Complaint</label>
+                <textarea id="apptComplaint" class="form-textarea" placeholder="Brief description of symptoms"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('bookApptModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="bookAppointment()">Book Appointment</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+renderSidebar('appointments');
+renderTopbar('Appointments', 'Manage patient appointments and queue');
+
+let allPatients = [], allDoctors = [];
+let currentPage = 1;
+
+async function init() {
+    // Set today's date
+    document.getElementById('dateFilter').value = new Date().toISOString().split('T')[0];
+    document.getElementById('apptDate').value = new Date().toISOString().split('T')[0];
+    
+    const [docRes] = await Promise.all([api.get('/doctors')]);
+    if (docRes?.success) {
+        allDoctors = docRes.data;
+        const sel = document.getElementById('doctorSelect');
+        sel.innerHTML = '<option value="">Select Doctor</option>' + 
+            docRes.data.map(d => `<option value="${d.id}">${d.name} – ${d.specialization || ''}</option>`).join('');
+    }
+    loadAppointments();
+}
+
+async function loadAppointments(page = 1) {
+    currentPage = page;
+    const date = document.getElementById('dateFilter').value;
+    const status = document.getElementById('statusFilter').value;
+    let url = `/appointments?page=${page}&limit=20`;
+    if (date) url += `&date=${date}`;
+    if (status) url += `&status=${status}`;
+
+    const res = await api.get(url);
+    if (!res?.success) return;
+
+    const data = res.data;
+
+    // Stats
+    const stats = { total: data.length, comp: 0, wait: 0, canc: 0 };
+    data.forEach(a => {
+        if (a.status === 'completed') stats.comp++;
+        else if (a.status === 'scheduled' || a.status === 'confirmed') stats.wait++;
+        else if (a.status === 'cancelled') stats.canc++;
+    });
+    document.getElementById('s_total').textContent = stats.total;
+    document.getElementById('s_comp').textContent = stats.comp;
+    document.getElementById('s_wait').textContent = stats.wait;
+    document.getElementById('s_canc').textContent = stats.canc;
+
+    if (data.length === 0) {
+        document.getElementById('apptTable').innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📅</div><h3>No appointments found</h3><p>No appointments for this date/filter</p></div></td></tr>`;
+        return;
+    }
+
+    document.getElementById('apptTable').innerHTML = data.map(a => `
+        <tr>
+            <td><span style="font-family:'Space Mono',monospace;font-size:13px;background:#EDE9FE;color:#5B21B6;padding:4px 10px;border-radius:6px;font-weight:700;">#${a.token_number}</span></td>
+            <td>
+                <div style="font-weight:600;font-size:13.5px;">${a.patient_name}</div>
+                <div style="font-size:11px;color:#9CA3AF;">${a.uhid}</div>
+            </td>
+            <td>
+                <div style="font-weight:600;font-size:13px;">Dr. ${a.doctor_name}</div>
+                <div style="font-size:11px;color:#6B7280;">${a.specialization || ''}</div>
+            </td>
+            <td style="font-size:13px;">
+                <div>${formatDate(a.appointment_date)}</div>
+                <div style="font-size:11px;color:#9CA3AF;">${a.appointment_time || 'Flexible'}</div>
+            </td>
+            <td><span class="badge badge-secondary">${a.type}</span></td>
+            <td>${formatStatus(a.status)}</td>
+            <td>
+                <div style="display:flex;gap:4px;">
+                    ${a.status !== 'completed' && a.status !== 'cancelled' ? `
+                        <select class="form-select" style="font-size:11px;padding:4px 6px;width:auto;" onchange="updateStatus('${a.id}', this.value)">
+                            <option value="">Change</option>
+                            <option value="confirmed">Confirm</option>
+                            <option value="in-progress">Start</option>
+                            <option value="completed">Complete</option>
+                            <option value="cancelled">Cancel</option>
+                        </select>` : ''}
+                    <button class="btn-icon" title="OPD Consultation" onclick="window.location.href='opd.html?appointmentId=${a.id}&patientId=${a.patient_id}&doctorId=${a.doctor_id}'">🩺</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function updateStatus(id, status) {
+    if (!status) return;
+    const res = await api.put(`/appointments/${id}/status`, { status });
+    if (res?.success) {
+        showToast(`Status updated to ${status}`, 'success');
+        loadAppointments(currentPage);
+    } else {
+        showToast('Failed to update status', 'error');
+    }
+}
+
+async function searchPatients() {
+    const q = document.getElementById('patientSearch').value;
+    if (q.length < 2) { document.getElementById('patientSuggestions').style.display = 'none'; return; }
+    const res = await api.get(`/patients?search=${encodeURIComponent(q)}&limit=5`);
+    if (!res?.success) return;
+    const suggestions = document.getElementById('patientSuggestions');
+    if (res.data.length === 0) { suggestions.style.display = 'none'; return; }
+    suggestions.style.display = 'block';
+    suggestions.innerHTML = res.data.map(p => `
+        <div onclick="selectPatient('${p.id}','${p.name}','${p.uhid}')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #F3F4F6;font-size:13px;" onmouseover="this.style.background='#F9FAFB'" onmouseout="this.style.background='white'">
+            <span style="font-weight:600;">${p.name}</span>
+            <span style="color:#9CA3AF;margin-left:8px;font-size:11px;">${p.uhid} • ${p.phone}</span>
+        </div>`).join('');
+}
+
+function selectPatient(id, name, uhid) {
+    document.getElementById('selectedPatientId').value = id;
+    document.getElementById('patientSearch').value = name;
+    document.getElementById('patientSuggestions').style.display = 'none';
+    document.getElementById('selectedPatientInfo').innerHTML = `<span style="font-size:12px;background:#D1FAE5;color:#059669;padding:3px 10px;border-radius:6px;font-weight:600;">✓ ${name} (${uhid})</span>`;
+}
+
+async function bookAppointment() {
+    const patientId = document.getElementById('selectedPatientId').value;
+    const doctorId = document.getElementById('doctorSelect').value;
+    const date = document.getElementById('apptDate').value;
+    const time = document.getElementById('apptTime').value;
+    const type = document.getElementById('apptType').value;
+    const chiefComplaint = document.getElementById('apptComplaint').value;
+
+    if (!patientId || !doctorId || !date) {
+        showToast('Patient, doctor, and date are required', 'error');
+        return;
+    }
+
+    const res = await api.post('/appointments', { patientId, doctorId, appointmentDate: date, appointmentTime: time, type, chiefComplaint });
+    if (res?.success) {
+        showToast(`Appointment booked! Token #${res.data.token_number}`, 'success');
+        closeModal('bookApptModal');
+        loadAppointments(1);
+    } else {
+        showToast(res?.message || 'Failed to book appointment', 'error');
+    }
+}
+
+document.getElementById('dateFilter').addEventListener('change', () => loadAppointments(1));
+document.getElementById('statusFilter').addEventListener('change', () => loadAppointments(1));
+
+// Close suggestions on click outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#patientSearch') && !e.target.closest('#patientSuggestions')) {
+        document.getElementById('patientSuggestions').style.display = 'none';
+    }
+});
+
+if (new URLSearchParams(location.search).get('action') === 'book') {
+    setTimeout(() => openModal('bookApptModal'), 500);
+}
+
+init();
+</script>
+</body>
+</html>
