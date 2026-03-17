@@ -1,20 +1,22 @@
-# Use official Node.js LTS image
 FROM node:20-alpine
 
-# Set working directory
+# Root working dir
 WORKDIR /app
 
-# Copy backend package files first (for layer caching)
+# Step 1: Copy only package files (faster build)
 COPY backend/package*.json ./backend/
 
-# Install backend dependencies
-RUN cd backend && npm install --production
+# Step 2: Install dependencies
+WORKDIR /app/backend
+RUN npm install --production
 
-# Copy the rest of the project
+# Step 3: Copy full project
+WORKDIR /app
 COPY . .
 
-# Expose the port Railway will use
-EXPOSE 5000
+# Railway uses dynamic port
+ENV PORT=3000
+EXPOSE 3000
 
-# Start the server
+# Start server
 CMD ["node", "backend/server.js"]
