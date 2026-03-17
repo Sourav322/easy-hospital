@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Doctors – Easy Hospital</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-icon"><i data-lucide="activity"></i></div>
+        <div class="logo-text"><span class="logo-main">Easy</span><span class="logo-sub">Hospital</span></div>
+      </div>
+      <button class="sidebar-close" onclick="toggleSidebar()"><i data-lucide="x"></i></button>
+    </div>
+    <div id="sidebar-nav"></div>
+  </aside>
+  <div class="main-content">
+    <div id="topbar-container"></div>
+    <div class="page-content">
+      <div class="stats-grid">
+        <div class="stat-card purple"><div class="stat-icon"><i data-lucide="stethoscope"></i></div><div class="stat-info"><div class="stat-value" id="stat-total">—</div><div class="stat-label">Total Doctors</div></div></div>
+        <div class="stat-card green"><div class="stat-icon"><i data-lucide="check-circle"></i></div><div class="stat-info"><div class="stat-value" id="stat-active">—</div><div class="stat-label">Active</div></div></div>
+        <div class="stat-card blue"><div class="stat-icon"><i data-lucide="layers"></i></div><div class="stat-info"><div class="stat-value" id="stat-depts">—</div><div class="stat-label">Departments</div></div></div>
+        <div class="stat-card yellow"><div class="stat-icon"><i data-lucide="clock"></i></div><div class="stat-info"><div class="stat-value" id="stat-avg-fee">—</div><div class="stat-label">Avg. Consult Fee</div></div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="flex-between flex-wrap gap-3">
+          <div class="search-box">
+            <i data-lucide="search"></i>
+            <input type="text" id="search-input" placeholder="Search by name or specialization…" oninput="debounce(loadDoctors,300)()"/>
+          </div>
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+            <select id="filter-dept" class="form-select" style="width:180px;" onchange="loadDoctors()">
+              <option value="">All Departments</option>
+            </select>
+            <button class="btn-primary" onclick="openAddModal()"><i data-lucide="plus"></i> Add Doctor</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Doctor</th><th>Department</th><th>Specialization</th><th>Qualification</th><th>Exp.</th><th>Fee</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="doctors-tbody"><tr><td colspan="8" class="text-center"><div class="loading-spinner"></div></td></tr></tbody>
+          </table>
+        </div>
+        <div id="pagination-container" class="pagination" style="margin-top:1rem;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Doctor Modal -->
+<div class="modal-overlay" id="doctor-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="doctor-modal-title">Add New Doctor</h3>
+      <button class="btn-icon" onclick="closeModal('doctor-modal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="doc-id"/>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Full Name *</label><input type="text" id="doc-name" class="form-input" placeholder="Dr. Full Name"/></div>
+        <div class="form-group"><label class="form-label">Phone *</label><input type="tel" id="doc-phone" class="form-input" placeholder="+91 98765 43210"/></div>
+        <div class="form-group"><label class="form-label">Email</label><input type="email" id="doc-email" class="form-input" placeholder="doctor@hospital.com"/></div>
+        <div class="form-group"><label class="form-label">Department *</label><select id="doc-dept" class="form-select"></select></div>
+        <div class="form-group"><label class="form-label">Specialization *</label><input type="text" id="doc-spec" class="form-input" placeholder="Cardiologist"/></div>
+        <div class="form-group"><label class="form-label">Qualification</label><input type="text" id="doc-qual" class="form-input" placeholder="MBBS, MD"/></div>
+        <div class="form-group"><label class="form-label">Experience (yrs)</label><input type="number" id="doc-exp" class="form-input" placeholder="5" min="0"/></div>
+        <div class="form-group"><label class="form-label">Consultation Fee (₹)</label><input type="number" id="doc-fee" class="form-input" placeholder="500" min="0"/></div>
+        <div class="form-group"><label class="form-label">Registration No.</label><input type="text" id="doc-reg" class="form-input" placeholder="MCI-12345"/></div>
+        <div class="form-group"><label class="form-label">Gender</label><select id="doc-gender" class="form-select"><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
+      </div>
+      <div class="form-group" style="margin-top:.75rem;">
+        <label class="form-label">Available Days</label>
+        <div id="days-picker" style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem;"></div>
+      </div>
+      <div class="form-grid" style="margin-top:.75rem;">
+        <div class="form-group"><label class="form-label">Start Time</label><input type="time" id="doc-start" class="form-input" value="09:00"/></div>
+        <div class="form-group"><label class="form-label">End Time</label><input type="time" id="doc-end" class="form-input" value="17:00"/></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('doctor-modal')">Cancel</button>
+      <button class="btn-primary" onclick="saveDoctor()"><i data-lucide="save"></i> Save Doctor</button>
+    </div>
+  </div>
+</div>
+
+<!-- View Doctor Modal -->
+<div class="modal-overlay" id="view-doctor-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header"><h3>Doctor Profile</h3><button class="btn-icon" onclick="closeModal('view-doctor-modal')"><i data-lucide="x"></i></button></div>
+    <div class="modal-body" id="view-doctor-body"></div>
+    <div class="modal-footer"><button class="btn-outline" onclick="closeModal('view-doctor-modal')">Close</button></div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  requireAuth();
+  renderSidebar('doctors');
+  renderTopbar('Doctors', 'Manage your medical staff');
+  lucide.createIcons();
+
+  const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  let selectedDays = [], editingId = null, currentPage = 1, allDepts = [];
+  const PER_PAGE = 10;
+
+  // Build day picker
+  DAYS.forEach(d => {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.textContent = d.slice(0,3); btn.dataset.day = d;
+    btn.className = 'btn-outline btn-sm';
+    btn.onclick = () => {
+      if (selectedDays.includes(d)) { selectedDays = selectedDays.filter(x=>x!==d); btn.className='btn-outline btn-sm'; }
+      else { selectedDays.push(d); btn.className='btn-primary btn-sm'; }
+    };
+    document.getElementById('days-picker').appendChild(btn);
+  });
+
+  function setDays(days) {
+    selectedDays = days||[];
+    document.querySelectorAll('#days-picker button').forEach(btn => {
+      btn.className = selectedDays.includes(btn.dataset.day) ? 'btn-primary btn-sm' : 'btn-outline btn-sm';
+    });
+  }
+
+  function initials(n) { return (n||'').split(' ').map(x=>x[0]).join('').toUpperCase().slice(0,2); }
+
+  async function loadDepartments() {
+    const res = await api.get('/api/doctors/departments');
+    allDepts = res.departments || [];
+    const fSel = document.getElementById('filter-dept');
+    const dSel = document.getElementById('doc-dept');
+    allDepts.forEach(d => {
+      fSel.innerHTML += `<option value="${d.id}">${d.name}</option>`;
+      dSel.innerHTML += `<option value="${d.id}">${d.name}</option>`;
+    });
+    document.getElementById('stat-depts').textContent = allDepts.length;
+  }
+
+  async function loadDoctors() {
+    const search = document.getElementById('search-input').value;
+    const dept = document.getElementById('filter-dept').value;
+    let url = `/api/doctors?page=${currentPage}&limit=${PER_PAGE}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (dept) url += `&department_id=${dept}`;
+    const res = await api.get(url);
+    const docs = res.doctors || [];
+    const total = res.total || 0;
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-active').textContent = docs.filter(d=>d.is_active).length;
+    const avgFee = docs.length ? Math.round(docs.reduce((s,d)=>s+Number(d.consultation_fee||0),0)/docs.length) : 0;
+    document.getElementById('stat-avg-fee').textContent = avgFee ? '₹'+avgFee : '—';
+
+    const tbody = document.getElementById('doctors-tbody');
+    if (!docs.length) { tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><i data-lucide="stethoscope"></i><p>No doctors found</p></div></td></tr>`; lucide.createIcons(); return; }
+    tbody.innerHTML = docs.map(d => `<tr>
+      <td><div style="display:flex;align-items:center;gap:.75rem;"><div class="avatar-circle">${initials(d.name)}</div><div><div style="font-weight:600;">${d.name}</div><div style="font-size:.75rem;color:var(--text-muted);">${d.phone||''}</div></div></div></td>
+      <td><span class="badge-info">${d.department_name||'—'}</span></td>
+      <td>${d.specialization||'—'}</td>
+      <td>${d.qualification||'—'}</td>
+      <td>${d.experience_years ? d.experience_years+'y' : '—'}</td>
+      <td>${d.consultation_fee ? '₹'+Number(d.consultation_fee).toLocaleString() : '—'}</td>
+      <td><span class="badge-${d.is_active?'success':'secondary'}">${d.is_active?'Active':'Inactive'}</span></td>
+      <td><div style="display:flex;gap:.5rem;"><button class="btn-icon" onclick="viewDoctor(${d.id})" title="View"><i data-lucide="eye"></i></button><button class="btn-icon" onclick="editDoctor(${d.id})" title="Edit"><i data-lucide="edit"></i></button></div></td>
+    </tr>`).join('');
+    renderPagination(total, currentPage, PER_PAGE, p=>{currentPage=p;loadDoctors();});
+    lucide.createIcons();
+  }
+
+  async function viewDoctor(id) {
+    const res = await api.get(`/api/doctors/${id}`);
+    const d = res.doctor||res;
+    document.getElementById('view-doctor-body').innerHTML = `
+      <div style="display:flex;gap:1.5rem;align-items:flex-start;flex-wrap:wrap;">
+        <div class="avatar-circle avatar-lg">${initials(d.name)}</div>
+        <div style="flex:1;">
+          <h2 style="margin:0 0 .25rem;">${d.name}</h2>
+          <p style="color:var(--text-muted);margin:0 0 1.25rem;">${d.specialization||''} ${d.department_name?'· '+d.department_name:''}</p>
+          <div class="form-grid">
+            <div><label class="form-label">Phone</label><p>${d.phone||'—'}</p></div>
+            <div><label class="form-label">Email</label><p>${d.email||'—'}</p></div>
+            <div><label class="form-label">Qualification</label><p>${d.qualification||'—'}</p></div>
+            <div><label class="form-label">Experience</label><p>${d.experience_years?d.experience_years+' years':'—'}</p></div>
+            <div><label class="form-label">Fee</label><p>${d.consultation_fee?'₹'+Number(d.consultation_fee).toLocaleString():'—'}</p></div>
+            <div><label class="form-label">Reg. No.</label><p>${d.registration_number||'—'}</p></div>
+          </div>
+        </div>
+      </div>`;
+    openModal('view-doctor-modal'); lucide.createIcons();
+  }
+
+  function openAddModal() {
+    editingId = null;
+    document.getElementById('doctor-modal-title').textContent = 'Add New Doctor';
+    document.getElementById('doc-id').value = '';
+    ['doc-name','doc-phone','doc-email','doc-spec','doc-qual','doc-exp','doc-fee','doc-reg'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('doc-gender').value='';
+    document.getElementById('doc-dept').selectedIndex=0;
+    document.getElementById('doc-start').value='09:00';
+    document.getElementById('doc-end').value='17:00';
+    setDays([]);
+    openModal('doctor-modal'); lucide.createIcons();
+  }
+
+  async function editDoctor(id) {
+    const res = await api.get(`/api/doctors/${id}`);
+    const d = res.doctor||res;
+    editingId = id;
+    document.getElementById('doctor-modal-title').textContent = 'Edit Doctor';
+    document.getElementById('doc-name').value=d.name||'';
+    document.getElementById('doc-phone').value=d.phone||'';
+    document.getElementById('doc-email').value=d.email||'';
+    document.getElementById('doc-dept').value=d.department_id||'';
+    document.getElementById('doc-spec').value=d.specialization||'';
+    document.getElementById('doc-qual').value=d.qualification||'';
+    document.getElementById('doc-exp').value=d.experience_years||'';
+    document.getElementById('doc-fee').value=d.consultation_fee||'';
+    document.getElementById('doc-reg').value=d.registration_number||'';
+    document.getElementById('doc-gender').value=d.gender||'';
+    setDays(d.available_days||[]);
+    openModal('doctor-modal'); lucide.createIcons();
+  }
+
+  async function saveDoctor() {
+    const payload = {
+      name: document.getElementById('doc-name').value.trim(),
+      phone: document.getElementById('doc-phone').value.trim(),
+      email: document.getElementById('doc-email').value.trim(),
+      department_id: document.getElementById('doc-dept').value,
+      specialization: document.getElementById('doc-spec').value.trim(),
+      qualification: document.getElementById('doc-qual').value.trim(),
+      experience_years: document.getElementById('doc-exp').value||null,
+      consultation_fee: document.getElementById('doc-fee').value||null,
+      registration_number: document.getElementById('doc-reg').value.trim(),
+      gender: document.getElementById('doc-gender').value,
+      available_days: selectedDays,
+      available_start_time: document.getElementById('doc-start').value,
+      available_end_time: document.getElementById('doc-end').value,
+    };
+    if (!payload.name||!payload.phone||!payload.department_id) { showToast('Name, phone and department required.','error'); return; }
+    try {
+      if (editingId) { await api.put(`/api/doctors/${editingId}`, payload); showToast('Doctor updated!','success'); }
+      else { await api.post('/api/doctors', payload); showToast('Doctor added!','success'); }
+      closeModal('doctor-modal'); loadDoctors();
+    } catch(e) { showToast(e.message||'Error saving doctor','error'); }
+  }
+
+  function renderPagination(total, page, perPage, cb) {
+    const pages = Math.ceil(total/perPage);
+    const c = document.getElementById('pagination-container');
+    if (pages<=1){c.innerHTML='';return;}
+    c.innerHTML = `<button class="btn-outline btn-sm" ${page===1?'disabled':''} onclick="(${cb})(${page-1})">←</button>`
+      + Array.from({length:pages},(_,i)=>`<button class="btn-${i+1===page?'primary':'outline'} btn-sm" onclick="(${cb})(${i+1})">${i+1}</button>`).join('')
+      + `<button class="btn-outline btn-sm" ${page===pages?'disabled':''} onclick="(${cb})(${page+1})">→</button>`;
+  }
+
+  (async()=>{ await loadDepartments(); await loadDoctors(); lucide.createIcons(); })();
+</script>
+</body>
+</html>
