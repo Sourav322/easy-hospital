@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patients – Easy Hospital</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-layout">
+    <div id="sidebar-container"></div>
+    <div class="main-content">
+        <div id="topbar-container"></div>
+        <div class="page-content">
+
+            <!-- Stats Row -->
+            <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;" id="patientStats">
+                <div class="stat-card purple skeleton" style="height:90px;"></div>
+                <div class="stat-card green skeleton" style="height:90px;"></div>
+                <div class="stat-card blue skeleton" style="height:90px;"></div>
+                <div class="stat-card yellow skeleton" style="height:90px;"></div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-container">
+                <div class="table-header">
+                    <div>
+                        <div class="card-title">All Patients</div>
+                        <div style="font-size:12px;color:#6B7280;" id="totalCount">Loading...</div>
+                    </div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                        <div class="search-input-wrapper">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="searchInput" class="form-input" placeholder="Search name / phone / UHID..." style="width:260px;padding-left:36px;">
+                        </div>
+                        <select id="filterGender" class="form-select" style="width:120px;">
+                            <option value="">All Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <select id="filterBlood" class="form-select" style="width:110px;">
+                            <option value="">Blood Group</option>
+                            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                            <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="openModal('addPatientModal')">
+                            + New Patient
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>UHID</th>
+                                <th>Patient Name</th>
+                                <th>Age/Gender</th>
+                                <th>Phone</th>
+                                <th>Blood Group</th>
+                                <th>Last Visit</th>
+                                <th>Appointments</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patientsTable">
+                            <tr><td colspan="8" style="text-align:center;padding:40px;color:#9CA3AF;">Loading patients...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pagination" id="pagination"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Patient Modal -->
+<div class="modal-overlay" id="addPatientModal">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <div class="modal-title">👤 Register New Patient</div>
+            <button class="modal-close" onclick="closeModal('addPatientModal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <div style="background:#EDE9FE;border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#5B21B6;font-weight:600;">
+                UHID will be auto-generated upon registration
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Full Name <span class="required">*</span></label>
+                    <input type="text" id="p_name" class="form-input" placeholder="Patient full name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phone Number <span class="required">*</span></label>
+                    <input type="tel" id="p_phone" class="form-input" placeholder="+91 XXXXXXXXXX">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Age</label>
+                    <input type="number" id="p_age" class="form-input" placeholder="Years" min="0" max="150">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date of Birth</label>
+                    <input type="date" id="p_dob" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Gender</label>
+                    <select id="p_gender" class="form-select">
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Blood Group</label>
+                    <select id="p_blood" class="form-select">
+                        <option value="">Unknown</option>
+                        <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                        <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="p_email" class="form-input" placeholder="patient@email.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Alternate Phone</label>
+                    <input type="tel" id="p_altphone" class="form-input" placeholder="Optional">
+                </div>
+                <div class="form-group form-full">
+                    <label class="form-label">Address</label>
+                    <input type="text" id="p_address" class="form-input" placeholder="Full address">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">City</label>
+                    <input type="text" id="p_city" class="form-input" placeholder="City">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">State</label>
+                    <input type="text" id="p_state" class="form-input" placeholder="State">
+                </div>
+                <div class="form-group form-full">
+                    <label class="form-label">Allergy Notes</label>
+                    <textarea id="p_allergy" class="form-textarea" placeholder="Known allergies, reactions, etc."></textarea>
+                </div>
+            </div>
+            <div style="border-top:1px solid #E5E7EB;padding-top:16px;margin-top:4px;">
+                <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:12px;">Emergency Contact</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Contact Name</label>
+                        <input type="text" id="p_ec_name" class="form-input" placeholder="Name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Contact Phone</label>
+                        <input type="tel" id="p_ec_phone" class="form-input" placeholder="Phone number">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Relation</label>
+                        <select id="p_ec_rel" class="form-select">
+                            <option value="">Select</option>
+                            <option>Spouse</option><option>Parent</option><option>Child</option>
+                            <option>Sibling</option><option>Friend</option><option>Other</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('addPatientModal')">Cancel</button>
+            <button class="btn btn-primary" id="savePatientBtn" onclick="savePatient()">
+                Register Patient
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- View Patient Modal -->
+<div class="modal-overlay" id="viewPatientModal">
+    <div class="modal modal-xl">
+        <div class="modal-header">
+            <div class="modal-title">Patient Profile</div>
+            <button class="modal-close" onclick="closeModal('viewPatientModal')">✕</button>
+        </div>
+        <div class="modal-body" id="patientProfileContent">Loading...</div>
+    </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+renderSidebar('patients');
+renderTopbar('Patient Management', 'Register and manage patient records');
+
+let currentPage = 1;
+const limit = 15;
+
+async function loadPatients(page = 1) {
+    currentPage = page;
+    const search = document.getElementById('searchInput').value;
+    const gender = document.getElementById('filterGender').value;
+    const bloodGroup = document.getElementById('filterBlood').value;
+    
+    let url = `/patients?page=${page}&limit=${limit}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (gender) url += `&gender=${gender}`;
+    if (bloodGroup) url += `&bloodGroup=${bloodGroup}`;
+
+    document.getElementById('patientsTable').innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;"><div class="loading-spinner" style="margin:auto;"></div></td></tr>`;
+    
+    const res = await api.get(url);
+    if (!res?.success) {
+        document.getElementById('patientsTable').innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:#DC2626;">Failed to load patients</td></tr>`;
+        return;
+    }
+
+    const { data, pagination } = res;
+    document.getElementById('totalCount').textContent = `${pagination.total} patients registered`;
+
+    if (data.length === 0) {
+        document.getElementById('patientsTable').innerHTML = `
+            <tr><td colspan="8">
+                <div class="empty-state">
+                    <div class="empty-icon">👥</div>
+                    <h3>No patients found</h3>
+                    <p>Register a new patient to get started</p>
+                </div>
+            </td></tr>`;
+        return;
+    }
+
+    const bloodColors = { 'A+': '#DC2626','A-': '#B91C1C','B+': '#2563EB','B-': '#1D4ED8','O+': '#059669','O-': '#047857','AB+': '#7C3AED','AB-': '#6D28D9' };
+
+    document.getElementById('patientsTable').innerHTML = data.map(p => `
+        <tr>
+            <td><span style="font-family:'Space Mono',monospace;font-size:12px;background:#EDE9FE;color:#5B21B6;padding:3px 8px;border-radius:6px;">${p.uhid}</span></td>
+            <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:32px;height:32px;background:#EDE9FE;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#5B21B6;font-size:13px;flex-shrink:0;">${p.name.charAt(0)}</div>
+                    <div>
+                        <div style="font-weight:600;font-size:13.5px;color:#1F2937;">${p.name}</div>
+                        <div style="font-size:11px;color:#9CA3AF;">${p.city || ''}</div>
+                    </div>
+                </div>
+            </td>
+            <td style="font-size:13px;">${p.age || '–'} yrs / ${p.gender || '–'}</td>
+            <td style="font-size:13px;font-weight:500;">${p.phone}</td>
+            <td>
+                ${p.blood_group ? `<span style="background:${bloodColors[p.blood_group] || '#6B7280'}20;color:${bloodColors[p.blood_group] || '#6B7280'};padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;">${p.blood_group}</span>` : '–'}
+            </td>
+            <td style="font-size:12px;color:#6B7280;">${p.last_visit ? formatDate(p.last_visit) : 'Never'}</td>
+            <td style="text-align:center;font-weight:600;color:#5B21B6;">${p.total_appointments || 0}</td>
+            <td>
+                <div style="display:flex;gap:6px;">
+                    <button class="btn-icon" title="View Profile" onclick="viewPatient('${p.id}')">👁</button>
+                    <button class="btn-icon" title="Book Appointment" onclick="window.location.href='appointments.html?patientId=${p.id}'">📅</button>
+                    <button class="btn-icon" title="Edit" onclick="editPatient('${p.id}')">✏️</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+
+    // Pagination
+    const totalPages = pagination.totalPages;
+    let paginationHTML = `<span class="pagination-info">Showing ${(page-1)*limit+1}–${Math.min(page*limit, pagination.total)} of ${pagination.total}</span><div class="pagination-btns">`;
+    paginationHTML += `<button class="page-btn" onclick="loadPatients(${page-1})" ${page<=1?'disabled':''}>‹</button>`;
+    for (let i = Math.max(1, page-2); i <= Math.min(totalPages, page+2); i++) {
+        paginationHTML += `<button class="page-btn ${i===page?'active':''}" onclick="loadPatients(${i})">${i}</button>`;
+    }
+    paginationHTML += `<button class="page-btn" onclick="loadPatients(${page+1})" ${page>=totalPages?'disabled':''}>›</button></div>`;
+    document.getElementById('pagination').innerHTML = paginationHTML;
+}
+
+async function loadPatientStats() {
+    const res = await api.get('/patients/stats/summary');
+    if (!res?.success) return;
+    const { total, todayNew, bloodGroups } = res.data;
+    document.getElementById('patientStats').innerHTML = `
+        <div class="stat-card purple">
+            <div class="stat-icon purple">👥</div>
+            <div class="stat-info"><div class="stat-value">${total.toLocaleString()}</div><div class="stat-label">Total Patients</div></div>
+        </div>
+        <div class="stat-card green">
+            <div class="stat-icon green">➕</div>
+            <div class="stat-info"><div class="stat-value">${todayNew}</div><div class="stat-label">New Today</div></div>
+        </div>
+        <div class="stat-card blue">
+            <div class="stat-icon blue">🩸</div>
+            <div class="stat-info"><div class="stat-value">${bloodGroups.length}</div><div class="stat-label">Blood Groups</div></div>
+        </div>
+        <div class="stat-card yellow">
+            <div class="stat-icon yellow">🔬</div>
+            <div class="stat-info"><div class="stat-value">${bloodGroups.find(b=>b.blood_group==='O+')?.count || 0}</div><div class="stat-label">O+ Patients</div></div>
+        </div>
+    `;
+}
+
+async function savePatient() {
+    const btn = document.getElementById('savePatientBtn');
+    btn.textContent = 'Saving...';
+    btn.disabled = true;
+
+    const data = {
+        name: document.getElementById('p_name').value,
+        phone: document.getElementById('p_phone').value,
+        age: document.getElementById('p_age').value,
+        dob: document.getElementById('p_dob').value,
+        gender: document.getElementById('p_gender').value,
+        bloodGroup: document.getElementById('p_blood').value,
+        email: document.getElementById('p_email').value,
+        alternatePhone: document.getElementById('p_altphone').value,
+        address: document.getElementById('p_address').value,
+        city: document.getElementById('p_city').value,
+        state: document.getElementById('p_state').value,
+        allergyNotes: document.getElementById('p_allergy').value,
+        emergencyContactName: document.getElementById('p_ec_name').value,
+        emergencyContactPhone: document.getElementById('p_ec_phone').value,
+        emergencyContactRelation: document.getElementById('p_ec_rel').value
+    };
+
+    if (!data.name || !data.phone) {
+        showToast('Name and phone number are required', 'error');
+        btn.textContent = 'Register Patient';
+        btn.disabled = false;
+        return;
+    }
+
+    const res = await api.post('/patients', data);
+    btn.textContent = 'Register Patient';
+    btn.disabled = false;
+
+    if (res?.success) {
+        showToast(`Patient registered! UHID: ${res.data.uhid}`, 'success');
+        closeModal('addPatientModal');
+        loadPatients(1);
+        loadPatientStats();
+    } else {
+        showToast(res?.message || 'Failed to register patient', 'error');
+    }
+}
+
+async function viewPatient(id) {
+    openModal('viewPatientModal');
+    document.getElementById('patientProfileContent').innerHTML = `<div style="text-align:center;padding:40px;"><div class="loading-spinner" style="margin:auto;"></div></div>`;
+    
+    const res = await api.get(`/patients/${id}`);
+    if (!res?.success) {
+        document.getElementById('patientProfileContent').innerHTML = `<div class="empty-state"><div class="empty-icon">❌</div><p>Failed to load patient</p></div>`;
+        return;
+    }
+
+    const p = res.data;
+    document.getElementById('patientProfileContent').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+            <div>
+                <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
+                    <div style="width:64px;height:64px;background:#EDE9FE;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:#5B21B6;">${p.name.charAt(0)}</div>
+                    <div>
+                        <div style="font-size:20px;font-weight:800;color:#1F2937;">${p.name}</div>
+                        <div style="font-family:'Space Mono',monospace;color:#7C3AED;font-size:13px;">${p.uhid}</div>
+                        ${p.blood_group ? `<span style="background:#FEE2E2;color:#DC2626;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:700;">${p.blood_group}</span>` : ''}
+                    </div>
+                </div>
+                <div style="display:grid;gap:12px;">
+                    ${infoRow('📞 Phone', p.phone)}
+                    ${infoRow('👤 Age / Gender', `${p.age || '–'} yrs / ${p.gender || '–'}`)}
+                    ${infoRow('📧 Email', p.email || '–')}
+                    ${infoRow('📍 Address', [p.address, p.city, p.state].filter(Boolean).join(', ') || '–')}
+                    ${infoRow('⚠️ Allergies', p.allergy_notes || 'None noted')}
+                    ${infoRow('🆘 Emergency', p.emergency_contact_name ? `${p.emergency_contact_name} (${p.emergency_contact_relation}) - ${p.emergency_contact_phone}` : '–')}
+                </div>
+            </div>
+            <div>
+                <div style="font-size:14px;font-weight:700;color:#374151;margin-bottom:12px;">Recent Appointments</div>
+                ${p.recentAppointments && p.recentAppointments.length > 0 ? 
+                    p.recentAppointments.map(a => `
+                        <div style="padding:10px;background:#F9FAFB;border-radius:8px;margin-bottom:8px;border-left:3px solid #7C3AED;">
+                            <div style="font-size:13px;font-weight:600;">${formatDate(a.appointment_date)} – Dr. ${a.doctor_name}</div>
+                            <div style="font-size:12px;color:#6B7280;">${a.specialization || ''} ${formatStatus(a.status)}</div>
+                        </div>`).join('') :
+                    '<div style="color:#9CA3AF;font-size:13px;">No appointments yet</div>'}
+                
+                <div style="font-size:14px;font-weight:700;color:#374151;margin:16px 0 12px;">Medical History</div>
+                ${p.medicalHistory && p.medicalHistory.length > 0 ?
+                    p.medicalHistory.slice(0,3).map(h => `
+                        <div style="padding:10px;background:#F9FAFB;border-radius:8px;margin-bottom:8px;">
+                            <div style="font-size:13px;font-weight:600;">${h.condition || h.diagnosis}</div>
+                            <div style="font-size:12px;color:#6B7280;">${h.doctor_name ? `Dr. ${h.doctor_name}` : ''} • ${formatDate(h.recorded_at)}</div>
+                        </div>`).join('') :
+                    '<div style="color:#9CA3AF;font-size:13px;">No medical history</div>'}
+
+                ${p.qr_code ? `
+                    <div style="margin-top:16px;text-align:center;background:#F9FAFB;border-radius:8px;padding:12px;">
+                        <div style="font-size:12px;color:#6B7280;margin-bottom:8px;">Patient QR Code</div>
+                        <img src="${p.qr_code}" style="width:100px;height:100px;">
+                    </div>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+function infoRow(label, value) {
+    return `<div style="display:flex;gap:8px;"><span style="color:#9CA3AF;font-size:12.5px;width:120px;flex-shrink:0;">${label}</span><span style="font-size:13px;font-weight:500;color:#374151;">${value}</span></div>`;
+}
+
+function editPatient(id) { showToast('Edit functionality – open edit form', 'info'); }
+
+// Search with debounce
+document.getElementById('searchInput').addEventListener('input', debounce(() => loadPatients(1), 400));
+document.getElementById('filterGender').addEventListener('change', () => loadPatients(1));
+document.getElementById('filterBlood').addEventListener('change', () => loadPatients(1));
+
+// Open add modal if URL param
+if (new URLSearchParams(location.search).get('action') === 'add') {
+    setTimeout(() => openModal('addPatientModal'), 500);
+}
+
+loadPatients();
+loadPatientStats();
+</script>
+</body>
+</html>
