@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OPD – Easy Hospital</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-icon"><i data-lucide="activity"></i></div>
+        <div class="logo-text"><span class="logo-main">Easy</span><span class="logo-sub">Hospital</span></div>
+      </div>
+      <button class="sidebar-close" onclick="toggleSidebar()"><i data-lucide="x"></i></button>
+    </div>
+    <div id="sidebar-nav"></div>
+  </aside>
+  <div class="main-content">
+    <div id="topbar-container"></div>
+    <div class="page-content">
+
+      <div class="stats-grid">
+        <div class="stat-card purple"><div class="stat-icon"><i data-lucide="clipboard-list"></i></div><div class="stat-info"><div class="stat-value" id="stat-total">—</div><div class="stat-label">Total OPD Today</div></div></div>
+        <div class="stat-card green"><div class="stat-icon"><i data-lucide="check-circle"></i></div><div class="stat-info"><div class="stat-value" id="stat-completed">—</div><div class="stat-label">Completed</div></div></div>
+        <div class="stat-card blue"><div class="stat-icon"><i data-lucide="clock"></i></div><div class="stat-info"><div class="stat-value" id="stat-waiting">—</div><div class="stat-label">Waiting</div></div></div>
+        <div class="stat-card yellow"><div class="stat-icon"><i data-lucide="stethoscope"></i></div><div class="stat-info"><div class="stat-value" id="stat-doctors">—</div><div class="stat-label">Doctors on Duty</div></div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="flex-between flex-wrap gap-3">
+          <div class="search-box">
+            <i data-lucide="search"></i>
+            <input type="text" id="search-input" placeholder="Search by patient name or UHID…" oninput="debounce(loadOPD,300)()"/>
+          </div>
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+            <input type="date" id="filter-date" class="form-input" style="width:160px;" onchange="loadOPD()"/>
+            <select id="filter-doctor" class="form-select" style="width:180px;" onchange="loadOPD()">
+              <option value="">All Doctors</option>
+            </select>
+            <button class="btn-primary" onclick="openNewConsultModal()"><i data-lucide="plus"></i> New Consultation</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Token</th><th>Patient</th><th>Doctor</th><th>Complaints</th><th>Time</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="opd-tbody"><tr><td colspan="7" class="text-center"><div class="loading-spinner"></div></td></tr></tbody>
+          </table>
+        </div>
+        <div id="pagination-container" class="pagination" style="margin-top:1rem;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Consultation Modal -->
+<div class="modal-overlay" id="consult-modal">
+  <div class="modal modal-xl">
+    <div class="modal-header">
+      <h3 id="consult-modal-title">OPD Consultation</h3>
+      <button class="btn-icon" onclick="closeModal('consult-modal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="consult-apt-id"/>
+      <!-- Patient & Doctor (for new) -->
+      <div id="consult-select-section">
+        <div class="form-grid" style="margin-bottom:1rem;">
+          <div class="form-group">
+            <label class="form-label">Patient (UHID / Name) *</label>
+            <input type="text" id="consult-patient-search" class="form-input" placeholder="Type to search patient…" oninput="debounce(searchConsultPatient,300)()"/>
+            <div id="consult-patient-suggestions" class="suggestions-box" style="display:none;"></div>
+            <input type="hidden" id="consult-patient-id"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Doctor *</label>
+            <select id="consult-doctor" class="form-select"></select>
+          </div>
+        </div>
+      </div>
+      <hr style="margin:1rem 0;border-color:var(--border);"/>
+      <!-- Vitals -->
+      <h4 style="font-weight:700;margin-bottom:.75rem;">Vitals</h4>
+      <div class="form-grid-3" style="margin-bottom:1rem;">
+        <div class="form-group"><label class="form-label">BP (mmHg)</label><input type="text" id="vital-bp" class="form-input" placeholder="120/80"/></div>
+        <div class="form-group"><label class="form-label">Temperature (°F)</label><input type="number" id="vital-temp" class="form-input" placeholder="98.6"/></div>
+        <div class="form-group"><label class="form-label">Pulse (bpm)</label><input type="number" id="vital-pulse" class="form-input" placeholder="72"/></div>
+        <div class="form-group"><label class="form-label">SpO2 (%)</label><input type="number" id="vital-spo2" class="form-input" placeholder="98"/></div>
+        <div class="form-group"><label class="form-label">Weight (kg)</label><input type="number" id="vital-weight" class="form-input" placeholder="70"/></div>
+        <div class="form-group"><label class="form-label">Height (cm)</label><input type="number" id="vital-height" class="form-input" placeholder="170"/></div>
+      </div>
+      <!-- Consultation -->
+      <h4 style="font-weight:700;margin-bottom:.75rem;">Consultation</h4>
+      <div class="form-grid" style="margin-bottom:1rem;">
+        <div class="form-group"><label class="form-label">Chief Complaints</label><textarea id="consult-complaints" class="form-textarea" rows="2" placeholder="Patient's chief complaints…"></textarea></div>
+        <div class="form-group"><label class="form-label">Diagnosis</label><textarea id="consult-diagnosis" class="form-textarea" rows="2" placeholder="Clinical diagnosis…"></textarea></div>
+        <div class="form-group"><label class="form-label">Clinical Notes</label><textarea id="consult-notes" class="form-textarea" rows="2" placeholder="Examination notes, findings…"></textarea></div>
+        <div class="form-group"><label class="form-label">Follow-up Date</label><input type="date" id="consult-followup" class="form-input"/></div>
+      </div>
+      <!-- Prescription -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
+        <h4 style="font-weight:700;">Prescription</h4>
+        <button class="btn-outline btn-sm" onclick="addRxRow()"><i data-lucide="plus"></i> Add Medicine</button>
+      </div>
+      <div class="table-container" style="margin-bottom:1rem;">
+        <table id="rx-table">
+          <thead><tr><th>Medicine</th><th>Dosage</th><th>Frequency</th><th>Duration</th><th>Instructions</th><th></th></tr></thead>
+          <tbody id="rx-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('consult-modal')">Cancel</button>
+      <button class="btn-primary" onclick="saveConsultation()"><i data-lucide="save"></i> Save Consultation</button>
+    </div>
+  </div>
+</div>
+
+<!-- View Prescription Modal -->
+<div class="modal-overlay" id="rx-view-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header"><h3>Prescription Details</h3><button class="btn-icon" onclick="closeModal('rx-view-modal')"><i data-lucide="x"></i></button></div>
+    <div class="modal-body" id="rx-view-body"></div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="window.print()"><i data-lucide="printer"></i> Print</button>
+      <button class="btn-outline" onclick="closeModal('rx-view-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  requireAuth(); renderSidebar('opd'); renderTopbar('OPD', 'Outpatient Department consultations'); lucide.createIcons();
+
+  let currentPage=1; const PER_PAGE=10;
+
+  // Init date filter to today
+  document.getElementById('filter-date').value = new Date().toISOString().split('T')[0];
+
+  async function loadDoctors() {
+    const res = await api.get('/api/doctors?limit=100');
+    const docs = res.doctors||[];
+    const sel = document.getElementById('filter-doctor');
+    const csel = document.getElementById('consult-doctor');
+    docs.forEach(d => {
+      sel.innerHTML += `<option value="${d.id}">${d.name}</option>`;
+      csel.innerHTML += `<option value="${d.id}">${d.name} — ${d.specialization||''}</option>`;
+    });
+    document.getElementById('stat-doctors').textContent = docs.filter(d=>d.is_active).length;
+  }
+
+  async function loadOPD() {
+    const search = document.getElementById('search-input').value;
+    const date = document.getElementById('filter-date').value;
+    const doc = document.getElementById('filter-doctor').value;
+    let url = `/api/opd?page=${currentPage}&limit=${PER_PAGE}`;
+    if (search) url+=`&search=${encodeURIComponent(search)}`;
+    if (date) url+=`&date=${date}`;
+    if (doc) url+=`&doctor_id=${doc}`;
+    const res = await api.get(url);
+    const opds = res.consultations||[];
+    const total = res.total||0;
+
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-completed').textContent = opds.filter(o=>o.status==='completed').length;
+    document.getElementById('stat-waiting').textContent = opds.filter(o=>o.status==='waiting'||o.status==='in_progress').length;
+
+    const tbody = document.getElementById('opd-tbody');
+    if (!opds.length) { tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><i data-lucide="clipboard-list"></i><p>No consultations found</p></div></td></tr>`; lucide.createIcons(); return; }
+
+    tbody.innerHTML = opds.map(o => `<tr>
+      <td><span style="font-family:'Space Mono',monospace;font-weight:700;color:var(--primary);">#${o.token_number||'—'}</span></td>
+      <td><div style="font-weight:600;">${o.patient_name||'—'}</div><div style="font-size:.75rem;color:var(--text-muted);">${o.uhid||''}</div></td>
+      <td>${o.doctor_name||'—'}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.chief_complaints||'—'}</td>
+      <td style="font-size:.8125rem;">${o.created_at?new Date(o.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—'}</td>
+      <td><span class="badge-${o.status==='completed'?'success':o.status==='in_progress'?'warning':'secondary'}">${formatStatus(o.status)}</span></td>
+      <td><div style="display:flex;gap:.5rem;">
+        <button class="btn-icon" title="View Prescription" onclick="viewRx(${o.id})"><i data-lucide="file-text"></i></button>
+        ${o.status!=='completed'?`<button class="btn-icon" title="Start Consultation" onclick="editConsult(${o.id})"><i data-lucide="edit"></i></button>`:''}
+      </div></td>
+    </tr>`).join('');
+    renderPagination(total, currentPage, PER_PAGE, p=>{currentPage=p;loadOPD();});
+    lucide.createIcons();
+  }
+
+  async function searchConsultPatient() {
+    const q = document.getElementById('consult-patient-search').value;
+    if (q.length < 2) { document.getElementById('consult-patient-suggestions').style.display='none'; return; }
+    const res = await api.get(`/api/patients?search=${encodeURIComponent(q)}&limit=5`);
+    const patients = res.patients||[];
+    const box = document.getElementById('consult-patient-suggestions');
+    if (!patients.length) { box.style.display='none'; return; }
+    box.innerHTML = patients.map(p=>`<div class="suggestion-item" onclick="selectConsultPatient(${p.id},'${p.name} (${p.uhid})')">
+      <strong>${p.name}</strong> <span style="color:var(--text-muted);">${p.uhid} · ${p.phone||''}</span>
+    </div>`).join('');
+    box.style.display='block';
+  }
+
+  function selectConsultPatient(id, label) {
+    document.getElementById('consult-patient-id').value = id;
+    document.getElementById('consult-patient-search').value = label;
+    document.getElementById('consult-patient-suggestions').style.display='none';
+  }
+
+  let rxRows = [];
+  function addRxRow() {
+    const id = Date.now();
+    rxRows.push(id);
+    const tbody = document.getElementById('rx-tbody');
+    const tr = document.createElement('tr');
+    tr.id='rx-row-'+id;
+    tr.innerHTML=`
+      <td><input type="text" class="form-input" placeholder="Medicine name" id="rx-med-${id}"/></td>
+      <td><input type="text" class="form-input" placeholder="500mg" id="rx-dose-${id}"/></td>
+      <td><select class="form-select" id="rx-freq-${id}">
+        <option value="once_daily">Once daily</option><option value="twice_daily">Twice daily</option>
+        <option value="thrice_daily">Thrice daily</option><option value="four_times">4x daily</option>
+        <option value="sos">SOS</option><option value="before_meals">Before meals</option><option value="after_meals">After meals</option>
+      </select></td>
+      <td><input type="text" class="form-input" placeholder="5 days" id="rx-dur-${id}"/></td>
+      <td><input type="text" class="form-input" placeholder="With food" id="rx-inst-${id}"/></td>
+      <td><button class="btn-icon" onclick="removeRxRow(${id})"><i data-lucide="trash-2"></i></button></td>`;
+    tbody.appendChild(tr); lucide.createIcons();
+  }
+
+  function removeRxRow(id) {
+    document.getElementById('rx-row-'+id)?.remove();
+    rxRows = rxRows.filter(r=>r!==id);
+  }
+
+  function openNewConsultModal() {
+    document.getElementById('consult-modal-title').textContent='New OPD Consultation';
+    document.getElementById('consult-apt-id').value='';
+    document.getElementById('consult-patient-search').value='';
+    document.getElementById('consult-patient-id').value='';
+    document.getElementById('consult-select-section').style.display='block';
+    ['vital-bp','vital-temp','vital-pulse','vital-spo2','vital-weight','vital-height','consult-complaints','consult-diagnosis','consult-notes','consult-followup'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('rx-tbody').innerHTML=''; rxRows=[];
+    addRxRow();
+    openModal('consult-modal'); lucide.createIcons();
+  }
+
+  async function viewRx(opdId) {
+    const res = await api.get(`/api/opd/${opdId}/prescription`);
+    const rx = res.prescription||{};
+    const meds = res.medicines||[];
+    document.getElementById('rx-view-body').innerHTML=`
+      <div style="margin-bottom:1rem;">
+        <div class="form-grid">
+          <div><label class="form-label">Patient</label><p>${rx.patient_name||'—'}</p></div>
+          <div><label class="form-label">Doctor</label><p>${rx.doctor_name||'—'}</p></div>
+          <div><label class="form-label">Date</label><p>${rx.created_at?new Date(rx.created_at).toLocaleDateString():'—'}</p></div>
+          <div><label class="form-label">Diagnosis</label><p>${rx.diagnosis||'—'}</p></div>
+        </div>
+      </div>
+      ${meds.length?`<div class="table-container"><table><thead><tr><th>Medicine</th><th>Dosage</th><th>Frequency</th><th>Duration</th><th>Instructions</th></tr></thead><tbody>
+        ${meds.map(m=>`<tr><td>${m.medicine_name}</td><td>${m.dosage||'—'}</td><td>${formatStatus(m.frequency)}</td><td>${m.duration||'—'}</td><td>${m.instructions||'—'}</td></tr>`).join('')}
+      </tbody></table></div>`:'<p style="color:var(--text-muted);">No medications prescribed.</p>'}`;
+    openModal('rx-view-modal'); lucide.createIcons();
+  }
+
+  async function saveConsultation() {
+    const patientId = document.getElementById('consult-patient-id').value;
+    const doctorId = document.getElementById('consult-doctor').value;
+    if (!patientId||!doctorId) { showToast('Please select patient and doctor.','error'); return; }
+
+    const medicines = rxRows.map(id=>({
+      medicine_name: document.getElementById(`rx-med-${id}`)?.value?.trim(),
+      dosage: document.getElementById(`rx-dose-${id}`)?.value?.trim(),
+      frequency: document.getElementById(`rx-freq-${id}`)?.value,
+      duration: document.getElementById(`rx-dur-${id}`)?.value?.trim(),
+      instructions: document.getElementById(`rx-inst-${id}`)?.value?.trim(),
+    })).filter(m=>m.medicine_name);
+
+    const payload = {
+      patient_id: patientId,
+      doctor_id: doctorId,
+      blood_pressure: document.getElementById('vital-bp').value,
+      temperature: document.getElementById('vital-temp').value||null,
+      pulse_rate: document.getElementById('vital-pulse').value||null,
+      oxygen_saturation: document.getElementById('vital-spo2').value||null,
+      weight: document.getElementById('vital-weight').value||null,
+      height: document.getElementById('vital-height').value||null,
+      chief_complaints: document.getElementById('consult-complaints').value.trim(),
+      diagnosis: document.getElementById('consult-diagnosis').value.trim(),
+      clinical_notes: document.getElementById('consult-notes').value.trim(),
+      follow_up_date: document.getElementById('consult-followup').value||null,
+      medicines,
+    };
+    try {
+      await api.post('/api/opd', payload);
+      showToast('Consultation saved!','success');
+      closeModal('consult-modal'); loadOPD();
+    } catch(e) { showToast(e.message||'Error saving consultation','error'); }
+  }
+
+  function renderPagination(total, page, perPage, cb) {
+    const pages=Math.ceil(total/perPage);
+    const c=document.getElementById('pagination-container');
+    if(pages<=1){c.innerHTML='';return;}
+    c.innerHTML=`<button class="btn-outline btn-sm" ${page===1?'disabled':''} onclick="(${cb})(${page-1})">←</button>`
+      +Array.from({length:pages},(_,i)=>`<button class="btn-${i+1===page?'primary':'outline'} btn-sm" onclick="(${cb})(${i+1})">${i+1}</button>`).join('')
+      +`<button class="btn-outline btn-sm" ${page===pages?'disabled':''} onclick="(${cb})(${page+1})">→</button>`;
+  }
+
+  (async()=>{ await loadDoctors(); loadOPD(); lucide.createIcons(); })();
+</script>
+</body>
+</html>
