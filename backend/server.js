@@ -13,10 +13,17 @@ const PORT = process.env.PORT || 5000;
 
 app.use(helmet({ contentSecurityPolicy: false }));
 
+// FIXED CORS
 app.use(cors({
-    origin: process.env.FRONTEND_URL || '*',
+    origin: [
+        'http://localhost:3000',
+        'http://localhost:5000',
+        'https://easy-hospital.vercel.app',   // change if your Vercel URL is different
+        'https://web-production-b4bc9.up.railway.app'
+    ],
     methods: ['GET','POST','PUT','DELETE','PATCH'],
-    allowedHeaders: ['Content-Type','Authorization']
+    allowedHeaders: ['Content-Type','Authorization'],
+    credentials: true
 }));
 
 app.use(express.json({ limit: '10mb' }));
