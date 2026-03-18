@@ -1,83 +1,109 @@
+
 require('dotenv').config();
+const express   = require('express');
+const cors      = require('cors');
+const helmet    = require('helmet');
+const morgan    = require('morgan');
+const { rateLimit } = require('express-rate-limit');
+const path      = require('path');
 
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
-const path = require('path');
+const app  = express();
+const PORT = process.env.PORT || 5000;
 
-const app = express();
-const PORT = process.env.PORT || 8080;
-
-// DB
-const pool = require('./config/database');
-
-/* ================= MIDDLEWARE ================= */
-
+// ─── Security Middleware ───────────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false }));
 
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'https://easy-hospital.vercel.app',
-    'https://web-production-b4bc9.up.railway.app'
-  ],
-  methods: ['GET','POST','PUT','DELETE','PATCH'],
-  allowedHeaders: ['Content-Type','Authorization'],
-  credentials: true
+    origin: (origin, cb) => {
+        const allowed = (process.env.FRONTEND_URL || '').split(',').map(s => s.trim());
+        // Allow requests with no origin (mobile apps, curl, etc.) and allowed origins
+        if (!origin || allowed.includes('*') || allowed.includes(origin)) return cb(null, true);
+        return cb(new Error('CORS: Origin not allowed'));
+    },
+    methods:      ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials:  true
 }));
 
-app.use(express.json());
-app.use(morgan('dev'));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-/* ================= RATE LIMIT ================= */
+// Logging (skip in test)
+if (process.env.NODE_ENV !== 'test') {
+    app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+}
 
+// General rate limiter (API)
 app.use('/api/', rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 1000
+    windowMs: 15 * 60 * 1000,
+    max:      500,
+    message:  { success: false, message: 'Too many requests, please try again later.' }
 }));
 
-/* ================= ROUTES ================= */
+// ─── Static Files ──────────────────────────────────────────────
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-const authRoutes = require('./routes/auth');
-app.use('/api/auth', authRoutes);
+// Serve frontend from /frontend folder
+app.use(express.static(path.join(__dirname, '../frontend')));
 
-/* ================= HEALTH ================= */
+// ─── API Routes ────────────────────────────────────────────────
+const authRoutes    = require('./routes/auth');
+const patientRoutes = require('./routes/patients');
+const { appointmentRouter, opdRouter, ipdRouter } = require('./routes/medical');
+const {
+    labRouter, billingRouter, staffRouter, inventoryRouter,
+    dashboardRouter, doctorsRouter, reportsRouter, settingsRouter
+} = require('./routes/modules');
 
+app.use('/api/auth',        authRoutes);
+app.use('/api/patients',    patientRoutes);
+app.use('/api/doctors',     doctorsRouter);
+app.use('/api/appointments', appointmentRouter);
+app.use('/api/opd',         opdRouter);
+app.use('/api/ipd',         ipdRouter);
+app.use('/api/lab',         labRouter);
+app.use('/api/billing',     billingRouter);
+app.use('/api/staff',       staffRouter);
+app.use('/api/inventory',   inventoryRouter);
+app.use('/api/dashboard',   dashboardRouter);
+app.use('/api/reports',     reportsRouter);
+app.use('/api/settings',    settingsRouter);
+
+// ─── Health Check ──────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Easy Hospital HMS API running'
-  });
+    res.json({
+        success:   true,
+        message:   'Easy Hospital HMS API is running',
+        version:   '1.0.0',
+        env:       process.env.NODE_ENV || 'development',
+        timestamp: new Date().toISOString()
+    });
 });
 
-/* ================= DB TEST ================= */
-
-app.get('/api/db-test', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT NOW()');
-    res.json({ success: true, time: result.rows[0] });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
+// ─── Frontend catch-all ────────────────────────────────────────
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
-/* ================= ROOT ================= */
-
-app.get('/', (req, res) => {
-  res.send('Easy Hospital HMS API running');
-});
-
-/* ================= ERROR ================= */
-
+// ─── Global Error Handler ──────────────────────────────────────
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ success: false, message: 'Server Error' });
+    console.error('Unhandled error:', err.stack);
+    res.status(500).json({
+        success: false,
+        message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message
+    });
 });
 
-/* ================= SERVER ================= */
-
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+// ─── Start Server ──────────────────────────────────────────────
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`
+╔══════════════════════════════════════════════╗
+║   🏥  Easy Hospital HMS                      ║
+║   Port  : ${PORT}                                ║
+║   Mode  : ${(process.env.NODE_ENV || 'development').padEnd(12)}                ║
+║   Health: /api/health                        ║
+╚══════════════════════════════════════════════╝
+    `);
 });
+
+module.exports = app;
