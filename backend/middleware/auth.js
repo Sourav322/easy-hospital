@@ -2,21 +2,12 @@ const express = require('express');
 const router  = express.Router();
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
-const { rateLimit } = require('express-rate-limit');
 const db      = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 
-// Strict rate limiter for auth endpoints
-const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10,                   // max 10 attempts per window
-    message: { success: false, message: 'Too many login attempts. Please try again in 15 minutes.' },
-    standardHeaders: true,
-    legacyHeaders: false
-});
 
 // ─── POST /api/auth/login ──────────────────────────────────────
-router.post('/login', authLimiter, async (req, res) => {
+router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
