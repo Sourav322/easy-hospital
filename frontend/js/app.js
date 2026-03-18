@@ -2,12 +2,9 @@
 // Easy Hospital HMS - API Client
 // ====================================================
 
-const RAILWAY_BACKEND = 'https://web-production-b4bc9.up.railway.app';
-
 const API_BASE = window.location.hostname === 'localhost'
   ? 'http://localhost:5000/api'
-  : `${RAILWAY_BACKEND}/api`;
-
+  : 'https://web-production-b4bc9.up.railway.app/api';
 const api = {
     getToken: () => localStorage.getItem('ehms_token'),
     getUser: () => JSON.parse(localStorage.getItem('ehms_user') || 'null'),
@@ -252,3 +249,4 @@ function debounce(func, wait) {
 if (!window.location.pathname.includes('index.html') && window.location.pathname !== '/') {
     api.requireAuth();
 }
+
