@@ -3,7 +3,6 @@ const express   = require('express');
 const cors      = require('cors');
 const helmet    = require('helmet');
 const morgan    = require('morgan');
-const { rateLimit } = require('express-rate-limit');
 const path      = require('path');
 
 const app  = express();
@@ -26,12 +25,6 @@ if (process.env.NODE_ENV !== 'test') {
     app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 }
 
-// General rate limiter (API)
-app.use('/api/', rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max:      500,
-    message:  { success: false, message: 'Too many requests, please try again later.' }
-}));
 
 // ─── Static Files ──────────────────────────────────────────────
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
