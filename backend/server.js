@@ -13,15 +13,9 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet({ contentSecurityPolicy: false }));
 
 app.use(cors({
-    origin: (origin, cb) => {
-        const allowed = (process.env.FRONTEND_URL || '').split(',').map(s => s.trim());
-        // Allow requests with no origin (mobile apps, curl, etc.) and allowed origins
-        if (!origin || allowed.includes('*') || allowed.includes(origin)) return cb(null, true);
-        return cb(new Error('CORS: Origin not allowed'));
-    },
+    origin: '*',
     methods:      ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials:  true
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json({ limit: '10mb' }));
