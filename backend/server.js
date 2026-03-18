@@ -1,4 +1,5 @@
 require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -6,19 +7,28 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 
+// DATABASE
+const pool = require('./config/database');
+
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8080;
+
+/* ================= DATABASE CONNECTION ================= */
+
+pool.connect()
+  .then(() => console.log('✅ PostgreSQL Connected'))
+  .catch(err => console.error('❌ PostgreSQL Connection Error:', err.message));
+
 
 /* ================= MIDDLEWARE ================= */
 
 app.use(helmet({ contentSecurityPolicy: false }));
 
-// FIXED CORS
 app.use(cors({
     origin: [
         'http://localhost:3000',
         'http://localhost:5000',
-        'https://easy-hospital.vercel.app',   // change if your Vercel URL is different
+        'https://easy-hospital.vercel.app',
         'https://web-production-b4bc9.up.railway.app'
     ],
     methods: ['GET','POST','PUT','DELETE','PATCH'],
@@ -30,6 +40,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan('dev'));
 
+
 /* ================= RATE LIMIT ================= */
 
 const limiter = rateLimit({
@@ -40,9 +51,11 @@ const limiter = rateLimit({
 
 app.use('/api/', limiter);
 
+
 /* ================= STATIC FILES ================= */
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 /* ================= ROUTES ================= */
 
@@ -76,6 +89,7 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/settings', settingsRouter);
 
+
 /* ================= HEALTH CHECK ================= */
 
 app.get('/api/health', (req,res)=>{
@@ -87,11 +101,25 @@ app.get('/api/health', (req,res)=>{
     });
 });
 
+
+/* ================= DATABASE TEST ================= */
+
+app.get('/api/db-test', async (req,res)=>{
+    try{
+        const result = await pool.query('SELECT NOW()');
+        res.json({ success:true, dbTime: result.rows[0] });
+    }catch(err){
+        res.status(500).json({ success:false, error: err.message });
+    }
+});
+
+
 /* ================= ROOT ROUTE ================= */
 
 app.get('/', (req,res)=>{
     res.send('Easy Hospital HMS API running');
 });
+
 
 /* ================= ERROR HANDLER ================= */
 
@@ -100,14 +128,21 @@ app.use((err,req,res,next)=>{
 
     res.status(500).json({
         success:false,
-        message: err.message
+        message: process.env.NODE_ENV === 'production'
+        ? 'Server Error'
+        : err.message
     });
 });
+
 
 /* ================= SERVER ================= */
 
 app.listen(PORT, ()=>{
-    console.log(`Easy Hospital Server running on port ${PORT}`);
+    console.log(`
+🚀 Easy Hospital HMS Server Started
+🌐 Port: ${PORT}
+📦 Environment: ${process.env.NODE_ENV}
+    `);
 });
 
 module.exports = app;
