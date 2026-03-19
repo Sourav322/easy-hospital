@@ -10,8 +10,41 @@
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     body{min-height:100vh;background:#0A0724;font-family:'Plus Jakarta Sans',sans-serif;color:#fff;display:grid;grid-template-columns:1fr 1fr;}
     @media(max-width:900px){body{grid-template-columns:1fr;}}
-    .left-panel{background:linear-gradient(135deg,#0A0724 0%,#1E0A5C 50%,#2D1184 100%);display:flex;flex-direction:column;justify-content:center;padding:3rem;position:relative;overflow:hidden;}
-    .left-panel::before{content:'';position:absolute;top:-100px;left:-100px;width:500px;height:500px;background:radial-gradient(circle,rgba(139,92,246,0.25),transparent 70%);pointer-events:none;}
+    .left-panel{background:linear-gradient(135deg,#050318 0%,#0D0640 40%,#1A0A6E 100%);display:flex;flex-direction:column;justify-content:center;padding:3rem;position:relative;overflow:hidden;}
+
+    /* ── Animated background particles ── */
+    .particles{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
+    .particle{position:absolute;border-radius:50%;opacity:0;animation:floatUp linear infinite;}
+    @keyframes floatUp{0%{opacity:0;transform:translateY(100%) scale(0)}10%{opacity:0.6}90%{opacity:0.1}100%{opacity:0;transform:translateY(-100vh) scale(1.5)}}
+
+    /* ── Heartbeat ECG line ── */
+    .ecg-wrap{position:absolute;bottom:80px;left:0;right:0;height:60px;pointer-events:none;overflow:hidden;}
+    .ecg-line{stroke:#7C3AED;stroke-width:2;fill:none;stroke-dasharray:800;stroke-dashoffset:800;animation:drawEcg 3s ease-in-out infinite;}
+    @keyframes drawEcg{0%{stroke-dashoffset:800;opacity:1}70%{stroke-dashoffset:0;opacity:1}85%{opacity:0.3}100%{stroke-dashoffset:800;opacity:0}}
+
+    /* ── Pulsing rings ── */
+    .pulse-ring{position:absolute;border-radius:50%;border:1px solid rgba(124,58,237,0.3);animation:pulseRing 3s ease-out infinite;}
+    @keyframes pulseRing{0%{transform:scale(0.8);opacity:0.8}100%{transform:scale(2.5);opacity:0}}
+
+    /* ── Floating medical icons ── */
+    .med-icon{position:absolute;opacity:0;animation:floatIcon ease-in-out infinite;}
+    @keyframes floatIcon{0%{opacity:0;transform:translateY(20px) rotate(0deg)}20%{opacity:0.15}80%{opacity:0.1}100%{opacity:0;transform:translateY(-80px) rotate(15deg)}}
+
+    /* ── DNA helix dots ── */
+    .dna-dot{position:absolute;width:4px;height:4px;border-radius:50%;background:rgba(167,139,250,0.5);animation:dnaSpin linear infinite;}
+    @keyframes dnaSpin{0%{transform:translateX(0) translateY(0);opacity:0.8}50%{transform:translateX(20px) translateY(-10px);opacity:0.3}100%{transform:translateX(0) translateY(-20px);opacity:0}}
+
+    /* ── Stats counter cards ── */
+    .stats-row{display:flex;gap:0.75rem;margin-top:1.5rem;flex-wrap:wrap;}
+    .stat-pill{background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.25);border-radius:10px;padding:0.6rem 1rem;backdrop-filter:blur(8px);}
+    .stat-pill-num{font-size:1.1rem;font-weight:800;color:#A78BFA;font-family:'Space Mono',monospace;}
+    .stat-pill-label{font-size:0.68rem;color:rgba(255,255,255,0.5);margin-top:0.1rem;}
+
+    /* ── Glowing cross ── */
+    .med-cross{position:absolute;right:2rem;top:50%;transform:translateY(-50%);opacity:0.04;}
+
+    .left-panel::before{content:'';position:absolute;top:-100px;left:-100px;width:500px;height:500px;background:radial-gradient(circle,rgba(124,58,237,0.2),transparent 70%);pointer-events:none;}
+    .left-panel::after{content:'';position:absolute;bottom:-100px;right:-100px;width:400px;height:400px;background:radial-gradient(circle,rgba(99,102,241,0.15),transparent 70%);pointer-events:none;}
     .logo{display:flex;align-items:center;gap:0.6rem;margin-bottom:3rem;position:relative;z-index:1;}
     .logo-icon{width:38px;height:38px;background:linear-gradient(135deg,#7C3AED,#5B21B6);border-radius:10px;display:flex;align-items:center;justify-content:center;}
     .logo-text{font-size:1.15rem;font-weight:800;letter-spacing:-0.02em;}
@@ -79,22 +112,90 @@
 <body>
 <!-- Left -->
 <div class="left-panel">
-  <div class="logo">
-    <div class="logo-icon"><svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+
+  <!-- Animated particles -->
+  <div class="particles" id="particles"></div>
+
+  <!-- Pulse rings -->
+  <div class="pulse-ring" style="width:300px;height:300px;top:30%;left:30%;margin:-150px 0 0 -150px;animation-delay:0s;"></div>
+  <div class="pulse-ring" style="width:300px;height:300px;top:30%;left:30%;margin:-150px 0 0 -150px;animation-delay:1s;"></div>
+  <div class="pulse-ring" style="width:300px;height:300px;top:30%;left:30%;margin:-150px 0 0 -150px;animation-delay:2s;"></div>
+
+  <!-- Glowing medical cross -->
+  <div class="med-cross">
+    <svg width="180" height="180" viewBox="0 0 180 180" fill="white">
+      <rect x="70" y="10" width="40" height="160" rx="8"/>
+      <rect x="10" y="70" width="160" height="40" rx="8"/>
+    </svg>
+  </div>
+
+  <!-- ECG line -->
+  <div class="ecg-wrap">
+    <svg width="100%" height="60" viewBox="0 0 800 60" preserveAspectRatio="none">
+      <path class="ecg-line" d="M0,30 L80,30 L100,30 L110,5 L120,55 L130,10 L140,30 L160,30 L240,30 L260,30 L270,5 L280,55 L290,10 L300,30 L320,30 L400,30 L420,30 L430,5 L440,55 L450,10 L460,30 L480,30 L560,30 L580,30 L590,5 L600,55 L610,10 L620,30 L640,30 L800,30"/>
+    </svg>
+  </div>
+
+  <!-- Logo -->
+  <div class="logo" style="position:relative;z-index:2;">
+    <div class="logo-icon">
+      <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </div>
     <span class="logo-text">Easy Hospital</span>
   </div>
-  <div class="left-content">
+
+  <!-- Content -->
+  <div class="left-content" style="position:relative;z-index:2;">
     <h1>The HMS built for <span>modern healthcare</span></h1>
     <p>Join 500+ hospitals across India using Easy Hospital to streamline operations, improve patient care, and grow revenue.</p>
+
     <div class="feature-list">
-      <div class="feature-item"><div class="feature-check"><svg width="10" height="10" fill="none" stroke="#A78BFA" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>Full OPD, IPD, Lab & Billing management</div>
-      <div class="feature-item"><div class="feature-check"><svg width="10" height="10" fill="none" stroke="#A78BFA" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>Multi-hospital & multi-branch support</div>
-      <div class="feature-item"><div class="feature-check"><svg width="10" height="10" fill="none" stroke="#A78BFA" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>Role-based access for all staff types</div>
-      <div class="feature-item"><div class="feature-check"><svg width="10" height="10" fill="none" stroke="#A78BFA" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>Real-time analytics and reports</div>
-      <div class="feature-item"><div class="feature-check"><svg width="10" height="10" fill="none" stroke="#A78BFA" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>WhatsApp & SMS patient notifications</div>
-      <div class="feature-item"><div class="feature-check"><svg width="10" height="10" fill="none" stroke="#A78BFA" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>14-day free trial – no credit card needed</div>
+      <div class="feature-item">
+        <div class="feature-check"><svg width="10" height="10" fill="none" stroke="#A78BFA" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        Full OPD, IPD, Lab &amp; Billing management
+      </div>
+      <div class="feature-item">
+        <div class="feature-check"><svg width="10" height="10" fill="none" stroke="#A78BFA" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        Multi-hospital &amp; multi-branch support
+      </div>
+      <div class="feature-item">
+        <div class="feature-check"><svg width="10" height="10" fill="none" stroke="#A78BFA" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        Role-based access for all staff types
+      </div>
+      <div class="feature-item">
+        <div class="feature-check"><svg width="10" height="10" fill="none" stroke="#A78BFA" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        Real-time analytics &amp; reports
+      </div>
+      <div class="feature-item">
+        <div class="feature-check"><svg width="10" height="10" fill="none" stroke="#A78BFA" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        WhatsApp &amp; SMS patient notifications
+      </div>
+      <div class="feature-item">
+        <div class="feature-check"><svg width="10" height="10" fill="none" stroke="#A78BFA" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        14-day free trial – no credit card needed
+      </div>
     </div>
-    <div class="trust-badges">
+
+    <!-- Animated stats -->
+    <div class="stats-row">
+      <div class="stat-pill">
+        <div class="stat-pill-num" id="statHospitals">0</div>
+        <div class="stat-pill-label">Hospitals</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-pill-num" id="statPatients">0</div>
+        <div class="stat-pill-label">Patients Served</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-pill-num" id="statUptime">0%</div>
+        <div class="stat-pill-label">Uptime</div>
+      </div>
+    </div>
+
+    <div class="trust-badges" style="margin-top:1.5rem;">
       <div class="trust-badge">🔒 HIPAA Compliant</div>
       <div class="trust-badge">⏱ 99.9% Uptime</div>
       <div class="trust-badge">☁️ Cloud-hosted</div>
@@ -388,5 +489,105 @@ function tglPwd(id){
   el.type=el.type==='password'?'text':'password';
 }
 </script>
+
+<script>
+// ── Floating particles ─────────────────────────────────────
+(function createParticles(){
+  const container = document.getElementById('particles');
+  if(!container) return;
+  const colors = ['rgba(167,139,250,0.6)','rgba(124,58,237,0.5)','rgba(99,102,241,0.4)','rgba(196,181,253,0.4)'];
+  const medSymbols = ['✚','⚕','💊','🩺','🔬','💉','🫀','🧬'];
+
+  // Floating dots
+  for(let i=0;i<25;i++){
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random()*6+2;
+    p.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random()*100}%;
+      bottom:${Math.random()*20}%;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      animation-duration:${Math.random()*8+6}s;
+      animation-delay:${Math.random()*8}s;
+    `;
+    container.appendChild(p);
+  }
+
+  // Floating medical icons
+  medSymbols.forEach((sym, i) => {
+    const el = document.createElement('div');
+    el.className = 'med-icon';
+    el.textContent = sym;
+    el.style.cssText = `
+      font-size:${Math.random()*16+10}px;
+      left:${10+Math.random()*80}%;
+      bottom:${Math.random()*30}%;
+      animation-duration:${Math.random()*10+8}s;
+      animation-delay:${Math.random()*10}s;
+    `;
+    container.appendChild(el);
+  });
+})();
+
+// ── Counter animation ──────────────────────────────────────
+function animateCounter(el, target, suffix='', duration=2000){
+  if(!el) return;
+  let start=0, step=target/60;
+  const timer = setInterval(()=>{
+    start = Math.min(start+step, target);
+    el.textContent = Math.floor(start).toLocaleString('en-IN') + suffix;
+    if(start>=target){ el.textContent=target.toLocaleString('en-IN')+suffix; clearInterval(timer); }
+  }, duration/60);
+}
+
+// Start counters after 800ms
+setTimeout(()=>{
+  animateCounter(document.getElementById('statHospitals'), 500, '+');
+  animateCounter(document.getElementById('statPatients'), 50000, '+');
+  animateCounter(document.getElementById('statUptime'), 99, '%');
+}, 800);
+
+// ── DNA helix side decoration ──────────────────────────────
+(function createDNA(){
+  const panel = document.querySelector('.left-panel');
+  if(!panel) return;
+  for(let i=0;i<12;i++){
+    const d = document.createElement('div');
+    d.className = 'dna-dot';
+    d.style.cssText = `
+      left:${4+Math.sin(i)*3}%;
+      top:${10+i*7}%;
+      animation-duration:${2+i*0.3}s;
+      animation-delay:${i*0.2}s;
+    `;
+    panel.appendChild(d);
+  }
+})();
+
+// ── Typing effect on headline ──────────────────────────────
+(function typeEffect(){
+  const texts = ['modern healthcare','patient care','India future','your hospital'];
+  let idx=0, charIdx=0, deleting=false;
+  const el = document.querySelector('.left-content h1 span');
+  if(!el) return;
+
+  function type(){
+    const current = texts[idx];
+    if(!deleting){
+      el.textContent = current.substring(0,charIdx+1);
+      charIdx++;
+      if(charIdx===current.length){ deleting=true; setTimeout(type,2000); return; }
+    } else {
+      el.textContent = current.substring(0,charIdx-1);
+      charIdx--;
+      if(charIdx===0){ deleting=false; idx=(idx+1)%texts.length; }
+    }
+    setTimeout(type, deleting?50:80);
+  }
+  setTimeout(type, 1500);
+})();
+</script>
+
 </body>
 </html>
