@@ -73,6 +73,8 @@
     .signin-link a{color:#5B21B6;font-weight:600;text-decoration:none;}
     .err-banner{color:#DC2626;font-size:0.82rem;text-align:center;margin-top:0.5rem;display:none;}
   </style>
+  <!-- Cashfree Payment SDK -->
+  <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
 </head>
 <body>
 <!-- Left -->
@@ -169,15 +171,32 @@
       <h2>Choose Your Plan</h2>
       <p class="subtitle">14-day free trial on all plans • No credit card required</p>
       <div class="plan-cards">
-        <div class="plan-card sel" id="pc-starter" onclick="selPlan('starter')"><div class="plan-name">Starter</div><div class="plan-price">₹999<span>/mo</span></div><div class="plan-beds">Up to 50 beds</div></div>
-        <div class="plan-card" id="pc-growth" onclick="selPlan('growth')"><div class="plan-name">Growth</div><div class="plan-price">₹2,499<span>/mo</span></div><div class="plan-beds">Up to 200 beds</div></div>
-        <div class="plan-card" id="pc-enterprise" onclick="selPlan('enterprise')"><div class="plan-name">Enterprise</div><div class="plan-price">Custom</div><div class="plan-beds">Unlimited</div></div>
+        <div class="plan-card sel" id="pc-starter" onclick="selPlan('starter',999)">
+          <div class="plan-name">Starter</div>
+          <div class="plan-price">₹999<span>/mo</span></div>
+          <div class="plan-beds">Up to 50 beds</div>
+        </div>
+        <div class="plan-card" id="pc-growth" onclick="selPlan('growth',2499)">
+          <div class="plan-name">Growth</div>
+          <div class="plan-price">₹2,499<span>/mo</span></div>
+          <div class="plan-beds">Up to 200 beds</div>
+        </div>
+        <div class="plan-card" id="pc-enterprise" onclick="selPlan('enterprise',0)">
+          <div class="plan-name">Enterprise</div>
+          <div class="plan-price">Custom</div>
+          <div class="plan-beds">Unlimited</div>
+        </div>
+      </div>
+      <div id="enterpriseNote" style="display:none;background:#FEF3C7;border:1px solid #FDE68A;border-radius:8px;padding:0.75rem 1rem;font-size:0.82rem;color:#92400E;margin-bottom:0.5rem;">
+        📞 Enterprise plan requires a call. Our team will contact you within 24 hours after registration.
       </div>
       <div style="background:#F5F3FF;border:1px solid #DDD6FE;border-radius:10px;padding:1rem;font-size:0.82rem;color:#5B21B6;margin-bottom:0.5rem;">
         <strong>✓ All plans include:</strong> All modules, unlimited users, free onboarding, WhatsApp & SMS, daily backups
       </div>
       <div class="err-banner" id="regErr"></div>
-      <button class="btn-p" id="submitBtn" onclick="doRegister()">🏥 Start Free Trial</button>
+      <button class="btn-p" id="submitBtn" onclick="doRegister()">
+        <span id="btnText">🏥 Pay & Register</span>
+      </button>
       <button class="btn-o" onclick="goS(2)">← Back</button>
     </div>
 
@@ -195,7 +214,9 @@
 </div>
 
 <script>
+const BACKEND = 'https://web-production-b4bc9.up.railway.app';
 let plan='starter';
+let planPrice=999;
 function v(id){ const e=document.getElementById(id); return e?e.value.trim():''; }
 function fErr(fid,show){ const el=document.getElementById(fid); if(!el) return; el.classList.toggle('err',show); }
 function isEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
@@ -244,15 +265,27 @@ function updInd(n){
   for(let i=1;i<=2;i++){ const ln=document.getElementById('ln'+i); ln.className='step-line'+(i<n?' done':''); }
 }
 
-function selPlan(p){
+function selPlan(p, price){
   plan=p;
+  planPrice=price;
   document.querySelectorAll('.plan-card').forEach(c=>c.classList.remove('sel'));
   document.getElementById('pc-'+p).classList.add('sel');
+  // Show enterprise note
+  document.getElementById('enterpriseNote').style.display = p==='enterprise' ? 'block' : 'none';
+  // Update button text
+  if(p==='enterprise'){
+    document.getElementById('btnText').textContent = '📞 Register & Get Contacted';
+  } else {
+    document.getElementById('btnText').textContent = `🏥 Pay ₹${price.toLocaleString('en-IN')} & Register`;
+  }
 }
 
 async function doRegister(){
   const btn=document.getElementById('submitBtn');
-  btn.disabled=true; btn.textContent='Creating account…';
+  const btnText=document.getElementById('btnText');
+  btn.disabled=true;
+  btnText.textContent='Processing…';
+
   const payload={
     hospital_name:v('hName'), hospital_type:v('hType'),
     bed_capacity:parseInt(v('hBeds'))||0,
@@ -260,19 +293,81 @@ async function doRegister(){
     phone:v('hPhone'), email:v('hEmail'),
     admin_first_name:v('aFirst'), admin_last_name:v('aLast'),
     admin_email:v('aEmail'), admin_phone:v('aPhone'),
-    admin_password:v('aPwd'), plan
+    admin_password:v('aPwd'), plan, planPrice
   };
+
+  const eb=document.getElementById('regErr');
+  eb.style.display='none';
+
   try{
-    const res=await fetch('/api/auth/register-hospital',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const data=await res.json();
-    if(!res.ok) throw new Error(data.error||'Registration failed');
-    document.getElementById('s3').style.display='none';
-    document.getElementById('stepInd').style.display='none';
-    document.getElementById('sSuccess').style.display='block';
+    // Enterprise — register without payment
+    if(plan === 'enterprise'){
+      const res=await fetch(`${BACKEND}/api/auth/register-hospital`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(payload)
+      });
+      const data=await res.json();
+      if(!res.ok) throw new Error(data.message||'Registration failed');
+      showSuccess();
+      return;
+    }
+
+    // Step 1: Register hospital (pending payment)
+    btnText.textContent='Creating account…';
+    const regRes=await fetch(`${BACKEND}/api/auth/register-hospital`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({...payload, paymentPending: true})
+    });
+    const regData=await regRes.json();
+    if(!regRes.ok) throw new Error(regData.message||'Registration failed');
+
+    // Step 2: Create Cashfree payment order
+    btnText.textContent='Initiating payment…';
+    const orderRes=await fetch(`${BACKEND}/api/payments/create-order`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        hospitalId: regData.hospitalId,
+        plan,
+        amount: planPrice,
+        customerName: `${v('aFirst')} ${v('aLast')}`.trim(),
+        customerEmail: v('aEmail'),
+        customerPhone: v('aPhone')
+      })
+    });
+    const orderData=await orderRes.json();
+    if(!orderData.success) throw new Error(orderData.message||'Payment init failed');
+
+    // Step 3: Open Cashfree checkout
+    btnText.textContent='Opening payment…';
+    const cashfree = await load({ mode: "production" });
+    const result = await cashfree.checkout({
+      paymentSessionId: orderData.paymentSessionId,
+      redirectTarget: "_self"
+    });
+
+    if(result.error){
+      throw new Error(result.error.message || 'Payment failed');
+    }
+    if(result.redirect){
+      // Payment completed — show success
+      showSuccess();
+    }
+
   } catch(e){
-    const eb=document.getElementById('regErr'); eb.textContent=e.message; eb.style.display='block';
-    btn.disabled=false; btn.textContent='🏥 Start Free Trial';
+    eb.textContent = e.message;
+    eb.style.display='block';
+    btn.disabled=false;
+    btnText.textContent = plan==='enterprise' ? '📞 Register & Get Contacted' : `🏥 Pay ₹${planPrice.toLocaleString('en-IN')} & Register`;
   }
+}
+
+function showSuccess(){
+  document.getElementById('s3').style.display='none';
+  document.getElementById('stepInd').style.display='none';
+  document.getElementById('sSuccess').style.display='block';
 }
 
 function chkPwd(v){
